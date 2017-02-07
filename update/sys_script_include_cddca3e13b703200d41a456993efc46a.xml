@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>package_private</access>
+        <active>true</active>
+        <api_name>sn_service_request.ServiceRequestManagement</api_name>
+        <client_callable>false</client_callable>
+        <description/>
+        <name>ServiceRequestManagement</name>
+        <script><![CDATA[var ServiceRequestManagement = Class.create();
+ServiceRequestManagement.prototype = {
+	initialize: function() {
+	},
+
+	find: function(serviceRequest) {
+
+	},
+
+	schedule: function(serviceRequest) {
+
+		var scheduledTime = deriveScheduledTime(serviceRequest);
+		var priority = derivePriority(serviceRequest);
+
+		// todo: check for duplicate token -- if found then error!
+
+		var gr = new GlideRecord('sn_service_request_service_request');
+		gr.initialize();
+		gr.token = serviceRequest.token;
+		gr.instance_name = serviceRequest.instance_name;
+		gr.instance_id = serviceRequest.instance_id;
+		gr.instance_url = serviceRequest.instance_url;
+		gr.node_id = serviceRequest.node_id;
+		gr.node_url = serviceRequest.node_url;
+		gr.capability_type = serviceRequest.capability.type;
+		gr.capability_name = serviceRequest.capability.name;
+		gr.capability_version = serviceRequest.capability.version;
+		gr.scheduled_time = scheduledTime;
+		gr.priority = priority;
+		gr.requested_by = gs.getUserName();
+		var sys_id = gr.insert();
+
+		var state = initState(sys_id);
+
+		var schedule = {};
+		schedule.sys_id = sys_id;
+		schedule.scheduledTime = scheduledTime.getDisplayValue();
+		schedule.priority = priority;
+		schedule.state = state;
+		return schedule;
+	},
+
+	checkRequestForErrors: function(serviceRequest) {
+		if (gs.nil(serviceRequest) || gs.nil(serviceRequest.capability) ||
+			gs.nil(serviceRequest.capability.type) || gs.nil(serviceRequest.capability.name) ||
+			gs.nil(serviceRequest.token) ||
+			gs.nil(serviceRequest.instance_name) || gs.nil(serviceRequest.instance_url) ||
+			gs.nil(serviceRequest.instance_id) || gs.nil(serviceRequest.node_id) ||
+			gs.nil(serviceRequest.node_url)
+		) {
+			return "serviceRequest parameter is malformed. It requires the following fields: token, instance_name, instance_url, instance_id, node_id, node_url, capability";
+		}
+	},
+
+	cancel: function(serviceRequest) {
+
+	},
+	
+
+	type: 'ServiceRequestManagement'
+};
+
+
+function deriveScheduledTime(jobRequest) {
+	// todo: in the future we may have more logic tied to this...
+	return new GlideDateTime();
+}
+
+function derivePriority(jobRequest) {
+	// todo: in the future we may have more logic tied to this...
+	return 100;
+}
+
+function initState(serviceRequestSysId) {
+	var defaultState = 'created';
+	var gr = new GlideRecord('sn_service_request_service_request_status');
+	gr.initialize();
+	gr.service_request = serviceRequestSysId;
+	gr.state = defaultState;
+	gr.insert();
+
+	return defaultState;
+	// todo: need to figure out a cascade-delete strategy
+}
+]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2017-02-07 21:59:03</sys_created_on>
+        <sys_customer_update>false</sys_customer_update>
+        <sys_id>cddca3e13b703200d41a456993efc46a</sys_id>
+        <sys_mod_count>3</sys_mod_count>
+        <sys_name>ServiceRequestManagement</sys_name>
+        <sys_package display_value="Service Request Management" source="sn_service_request">c8a02be10b303200d109061437673a7b</sys_package>
+        <sys_policy>read</sys_policy>
+        <sys_replace_on_upgrade>false</sys_replace_on_upgrade>
+        <sys_scope display_value="Service Request Management">c8a02be10b303200d109061437673a7b</sys_scope>
+        <sys_update_name>sys_script_include_cddca3e13b703200d41a456993efc46a</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-02-07 22:43:40</sys_updated_on>
+    </sys_script_include>
+</record_update>

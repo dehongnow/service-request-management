@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <database>
     <element label="Service Request" max_length="40" name="sn_service_request_service_request" type="collection">
+        <element label="Capability Name" max_length="40" name="capability_name" type="string"/>
+        <element label="Capability Type" max_length="40" name="capability_type" type="string"/>
+        <element label="Capability Version" max_length="40" name="capability_version" type="string"/>
         <element label="Instance ID" max_length="40" name="instance_id" type="string"/>
         <element label="Instance Name" max_length="255" name="instance_name" type="string"/>
         <element label="Instance URL" max_length="255" name="instance_url" type="string"/>

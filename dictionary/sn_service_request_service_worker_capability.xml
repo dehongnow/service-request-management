@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<database>
+    <element label="Service Worker Capability" max_length="40" name="sn_service_request_service_worker_capability" type="collection">
+        <element label="Service Capability" max_length="32" name="service_capability" reference="sn_service_request_service_capability" type="reference"/>
+        <element label="Service Worker" max_length="32" name="service_worker" reference="sn_service_request_service_worker" type="reference"/>
+        <index name="index">
+            <element name="service_worker"/>
+        </index>
+        <index name="index2">
+            <element name="service_capability"/>
+        </index>
+    </element>
+</database>

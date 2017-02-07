@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<database>
+    <element label="Service Request" max_length="40" name="sn_service_request_service_request" type="collection">
+        <element label="Instance ID" max_length="40" name="instance_id" type="string"/>
+        <element label="Instance Name" max_length="255" name="instance_name" type="string"/>
+        <element label="Instance URL" max_length="255" name="instance_url" type="string"/>
+        <element label="Node ID" max_length="40" name="node_id" type="string"/>
+        <element label="Node URL" max_length="255" name="node_url" type="string"/>
+        <element label="Priority" max_length="40" name="priority" type="integer"/>
+        <element label="Scheduled Time" max_length="40" name="scheduled_time" type="glide_date_time"/>
+        <element label="Service Capability" max_length="32" name="service_capability" reference="sn_service_request_service_capability" type="reference"/>
+        <element label="Service Worker" max_length="32" name="service_worker" reference="sn_service_request_service_worker" type="reference"/>
+        <element label="Token" max_length="40" name="token" type="string"/>
+        <index name="index">
+            <element name="service_worker"/>
+        </index>
+        <index name="index2">
+            <element name="service_capability"/>
+        </index>
+    </element>
+</database>

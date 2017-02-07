@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_ws_operation">
+    <sys_ws_operation action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <consumes>application/json,application/xml,text/xml</consumes>
+        <consumes_customized>false</consumes_customized>
+        <default_operation_uri/>
+        <enforce_acl/>
+        <http_method>POST</http_method>
+        <name>service request</name>
+        <operation_script><![CDATA[(function process(/*RESTAPIRequest*/ request, /*RESTAPIResponse*/ response) {
+
+
+
+})(request, response);]]></operation_script>
+        <operation_uri>/api/sn_service_request/service_request</operation_uri>
+        <produces>application/json,application/xml,text/xml</produces>
+        <produces_customized>false</produces_customized>
+        <relative_path>/</relative_path>
+        <request_example/>
+        <requires_acl_authorization>false</requires_acl_authorization>
+        <requires_authentication>true</requires_authentication>
+        <short_description/>
+        <sys_class_name>sys_ws_operation</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2017-02-07 21:49:45</sys_created_on>
+        <sys_customer_update>false</sys_customer_update>
+        <sys_id>bd3b63290b303200d109061437673a47</sys_id>
+        <sys_mod_count>1</sys_mod_count>
+        <sys_name>service request</sys_name>
+        <sys_package display_value="Service Request Management" source="sn_service_request">c8a02be10b303200d109061437673a7b</sys_package>
+        <sys_policy/>
+        <sys_replace_on_upgrade>false</sys_replace_on_upgrade>
+        <sys_scope display_value="Service Request Management">c8a02be10b303200d109061437673a7b</sys_scope>
+        <sys_update_name>sys_ws_operation_bd3b63290b303200d109061437673a47</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-02-07 21:52:15</sys_updated_on>
+        <web_service_definition display_value="service request">077a23e50b303200d109061437673a90</web_service_definition>
+        <web_service_version/>
+    </sys_ws_operation>
+</record_update>

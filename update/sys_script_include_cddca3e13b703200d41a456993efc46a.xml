@@ -13,7 +13,7 @@ ServiceRequestManagement.prototype = {
 	},
 
 	find: function(serviceRequest) {
-
+		// todo: implement
 	},
 
 	assignAvailableWork: function(workerRequest) {
@@ -141,14 +141,19 @@ function assignWork(serviceRequestGlideRecord, workerId) {
 	trackServiceRequestState(serviceRequestGlideRecord.getUniqueValue(), assignedState);
 
 	var assignment = {};
-	assignment.token = serviceRequestGlideRecord.getValue("token");
-	assignment.instance_id = serviceRequestGlideRecord.getValue("instance_id");
-	assignment.instance_name = serviceRequestGlideRecord.getValue("instance_name");
-	assignment.instance_url = serviceRequestGlideRecord.getValue("instance_url");
-	assignment.node_id = serviceRequestGlideRecord.getValue("node_id");
-	assignment.node_url = serviceRequestGlideRecord.getValue("node_url");
-
-	// todo: include the capabilities too
+	assignment.coordinates = {};
+	assignment.capability = {};
+	
+	assignment.coordinates.token = serviceRequestGlideRecord.getValue("token");
+	assignment.coordinates.instance_id = serviceRequestGlideRecord.getValue("instance_id");
+	assignment.coordinates.instance_name = serviceRequestGlideRecord.getValue("instance_name");
+	assignment.coordinates.instance_url = serviceRequestGlideRecord.getValue("instance_url");
+	assignment.coordinates.node_id = serviceRequestGlideRecord.getValue("node_id");
+	assignment.coordinates.node_url = serviceRequestGlideRecord.getValue("node_url");
+	
+	assignment.capability.type = serviceRequestGlideRecord.getValue("capability_type");
+	assignment.capability.name = serviceRequestGlideRecord.getValue("capability_name");
+	assignment.capability.version = serviceRequestGlideRecord.getValue("capability_version");
 	
 	return assignment;
 }
@@ -168,7 +173,7 @@ function trackServiceRequestState(serviceRequestSysId, state) {
         <sys_created_on>2017-02-07 21:59:03</sys_created_on>
         <sys_customer_update>false</sys_customer_update>
         <sys_id>cddca3e13b703200d41a456993efc46a</sys_id>
-        <sys_mod_count>25</sys_mod_count>
+        <sys_mod_count>26</sys_mod_count>
         <sys_name>ServiceRequestManagement</sys_name>
         <sys_package display_value="Service Request Management" source="sn_service_request">c8a02be10b303200d109061437673a7b</sys_package>
         <sys_policy>read</sys_policy>
@@ -176,6 +181,6 @@ function trackServiceRequestState(serviceRequestSysId, state) {
         <sys_scope display_value="Service Request Management">c8a02be10b303200d109061437673a7b</sys_scope>
         <sys_update_name>sys_script_include_cddca3e13b703200d41a456993efc46a</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2017-02-08 17:59:50</sys_updated_on>
+        <sys_updated_on>2017-02-08 18:22:24</sys_updated_on>
     </sys_script_include>
 </record_update>

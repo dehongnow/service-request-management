@@ -16,46 +16,25 @@ ServiceRequestManagement.prototype = {
 
 	},
 
-	assignNextAvailable: function() { // todo: accept a param containing worker id, capability
+	assignWorker: function(workerRequest) {
+		var serviceRequest = matchAvailableWork(workerRequest.capabilities);
+		if (gs.nil(serviceRequest)) {
+			return;
+		}
 
-		// todo: query based on "created", "scheduled_time" (now or in past)
-		// todo next: query based on matching capabilities
-
-		var serviceRequest = new GlideRecord("sn_service_request_service_request");
-		serviceRequest.addQuery("state", "created");
-		serviceRequest.orderBy("scheduled_time");
-		serviceRequest.setLimit(1);
-
-		serviceRequest.query();
-		if (serviceRequest.next()) {
-			// assign it
-			var assignedState = "assigned";
-			serviceRequest.setValue("state", assignedState);
-			serviceRequest.setValue("assigned_worker_id", "foobar"); // todo: get this from the method parameter
-			serviceRequest.update();			
-			trackState(serviceRequest.getUniqueValue(), assignedState);
-
-			var result = {};
-			result.token = serviceRequest.getValue("token");
-			result.instance_id = serviceRequest.getValue("instance_id");
-			result.instance_name = serviceRequest.getValue("instance_name");
-			result.instance_url = serviceRequest.getValue("instance_url");
-			result.node_id = serviceRequest.getValue("node_id");
-			result.node_url = serviceRequest.getValue("node_url");
-
-			// todo: include the capabilities too
-
-			return result;
+		var assignment = assignWork(serviceRequest, workerRequest.workerId);
+		if (!gs.nil(assignment)) {
+			return assignment;
 		}
 	},
 
-	schedule: function(serviceRequest) {
+	scheduleService: function(serviceRequest) {
 
 		var scheduledTime = deriveScheduledTime(serviceRequest);
 		var priority = derivePriority(serviceRequest);
 
 		// todo: check for duplicate token -- if found then error!
-		
+
 		var state = 'created';
 
 		var gr = new GlideRecord('sn_service_request_service_request');
@@ -75,7 +54,7 @@ ServiceRequestManagement.prototype = {
 		gr.requested_by = gs.getUserName();
 		var sys_id = gr.insert();
 
-		trackState(sys_id, state);
+		trackServiceRequestState(sys_id, state);
 
 		var schedule = {};
 		schedule.sys_id = sys_id;
@@ -85,15 +64,30 @@ ServiceRequestManagement.prototype = {
 		return schedule;
 	},
 
-	checkRequestForErrors: function(serviceRequest) {
-		if (gs.nil(serviceRequest) || gs.nil(serviceRequest.capability) ||
-			gs.nil(serviceRequest.capability.type) || gs.nil(serviceRequest.capability.name) ||
-			gs.nil(serviceRequest.token) ||
+	checkServiceRequest: function(serviceRequest) {
+		if (gs.nil(serviceRequest) || gs.nil(serviceRequest.token) ||
 			gs.nil(serviceRequest.instance_name) || gs.nil(serviceRequest.instance_url) ||
 			gs.nil(serviceRequest.instance_id) || gs.nil(serviceRequest.node_id) ||
 			gs.nil(serviceRequest.node_url)
 		) {
 			return "serviceRequest parameter is malformed. It requires the following fields: token, instance_name, instance_url, instance_id, node_id, node_url, capability";
+		}
+
+		return checkCapability(serviceRequest.capability);
+	},
+
+	checkWorkerRequest: function(workerRequest) {
+		if (gs.nil(workerRequest) || gs.nil(workerRequest.workerId) || gs.nil(workerRequest.capabilities) ||
+			gs.nil(workerRequest.capabilities.length) || 0 == workerRequest.capabilities.length
+		) {
+			return "workerRequest is malformed. It requires the following fields: id, capabilities";
+		}
+
+		for (i = 0; i < workerRequest.capabilities.length; i++) {
+			var error = checkCapability(workerRequest.capabilities[i]);
+			if (!gs.nil(error)) {
+				return error;
+			}
 		}
 	},
 
@@ -104,6 +98,11 @@ ServiceRequestManagement.prototype = {
 	type: 'ServiceRequestManagement'
 };
 
+function checkCapability(capability) {
+	if (gs.nil(capability) || gs.nil(capability.type) || gs.nil(capability.name) || gs.nil(capability.version)) {
+		return "capability is incomplete. It requires the following fields: type, name, version";
+	}
+}
 
 function deriveScheduledTime(jobRequest) {
 	// todo: in the future we may have more logic tied to this...
@@ -115,7 +114,46 @@ function derivePriority(jobRequest) {
 	return 100;
 }
 
-function trackState(serviceRequestSysId, state) {
+function matchAvailableWork(workerCapabilities) {
+
+	// todo: query based on "created", "scheduled_time" (now or in past)
+	// todo next: query based on matching capabilities
+	
+	var serviceRequest = new GlideRecord("sn_service_request_service_request");
+	serviceRequest.addQuery("state", "created");
+	serviceRequest.orderBy("scheduled_time");
+	serviceRequest.setLimit(1);
+
+	// todo: capability match...
+
+	serviceRequest.query();
+	if (serviceRequest.next()) {
+		return serviceRequest;
+	}
+}
+
+function assignWork(serviceRequestGlideRecord, workerId) {
+	var assignedState = "assigned";
+	serviceRequestGlideRecord.setValue("state", assignedState);
+	serviceRequestGlideRecord.setValue("assigned_worker_id", workerId);
+	serviceRequestGlideRecord.update(); // todo: check for null return value...this detects race condition and means no work assigned
+	
+	trackServiceRequestState(serviceRequestGlideRecord.getUniqueValue(), assignedState);
+
+	var assignment = {};
+	assignment.token = serviceRequestGlideRecord.getValue("token");
+	assignment.instance_id = serviceRequestGlideRecord.getValue("instance_id");
+	assignment.instance_name = serviceRequestGlideRecord.getValue("instance_name");
+	assignment.instance_url = serviceRequestGlideRecord.getValue("instance_url");
+	assignment.node_id = serviceRequestGlideRecord.getValue("node_id");
+	assignment.node_url = serviceRequestGlideRecord.getValue("node_url");
+
+	// todo: include the capabilities too
+	
+	return assignment;
+}
+
+function trackServiceRequestState(serviceRequestSysId, state) {
 	var gr = new GlideRecord('sn_service_request_service_request_status');
 	gr.initialize();
 	gr.service_request = serviceRequestSysId;
@@ -130,7 +168,7 @@ function trackState(serviceRequestSysId, state) {
         <sys_created_on>2017-02-07 21:59:03</sys_created_on>
         <sys_customer_update>false</sys_customer_update>
         <sys_id>cddca3e13b703200d41a456993efc46a</sys_id>
-        <sys_mod_count>10</sys_mod_count>
+        <sys_mod_count>24</sys_mod_count>
         <sys_name>ServiceRequestManagement</sys_name>
         <sys_package display_value="Service Request Management" source="sn_service_request">c8a02be10b303200d109061437673a7b</sys_package>
         <sys_policy>read</sys_policy>
@@ -138,6 +176,6 @@ function trackState(serviceRequestSysId, state) {
         <sys_scope display_value="Service Request Management">c8a02be10b303200d109061437673a7b</sys_scope>
         <sys_update_name>sys_script_include_cddca3e13b703200d41a456993efc46a</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2017-02-08 00:45:46</sys_updated_on>
+        <sys_updated_on>2017-02-08 17:45:10</sys_updated_on>
     </sys_script_include>
 </record_update>

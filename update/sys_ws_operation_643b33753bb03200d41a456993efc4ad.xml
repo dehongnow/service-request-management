@@ -18,13 +18,17 @@
 		return new sn_ws_err.BadRequestError(error, workerRequest);
 	}
 
-	var assignedWorkRequest = requestMgr.assignWorker(workerRequest);
-	if (!gs.nil(assignedWorkRequest)) {
-		return response.setBody(assignedWorkRequest);
+	var assignedWork = requestMgr.assignAvailableWork(workerRequest);
+		
+	var result = {};
+	if (!gs.nil(assignedWork)) {
+		result.assigned = true;
+		result.work = assignedWork;
+	} else {
+		result.assigned = false;
 	}
+	return result;
 	
-	// todo: return appropriate code if nothing is assigned (ie. nothing gets POSTED)
-
 })(request, response);]]></operation_script>
         <operation_uri>/api/sn_service_request/worker_request</operation_uri>
         <produces>application/json,application/xml,text/xml</produces>
@@ -39,7 +43,7 @@
         <sys_created_on>2017-02-08 17:38:22</sys_created_on>
         <sys_customer_update>false</sys_customer_update>
         <sys_id>643b33753bb03200d41a456993efc4ad</sys_id>
-        <sys_mod_count>0</sys_mod_count>
+        <sys_mod_count>2</sys_mod_count>
         <sys_name>Worker Request</sys_name>
         <sys_package display_value="Service Request Management" source="sn_service_request">c8a02be10b303200d109061437673a7b</sys_package>
         <sys_policy/>
@@ -47,7 +51,7 @@
         <sys_scope display_value="Service Request Management">c8a02be10b303200d109061437673a7b</sys_scope>
         <sys_update_name>sys_ws_operation_643b33753bb03200d41a456993efc4ad</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2017-02-08 17:38:22</sys_updated_on>
+        <sys_updated_on>2017-02-08 18:00:51</sys_updated_on>
         <web_service_definition display_value="Worker Request">102bff353bb03200d41a456993efc4c8</web_service_definition>
         <web_service_version/>
     </sys_ws_operation>

@@ -11,8 +11,10 @@
 ServiceRequestManagement.prototype = {
 	initialize: function() {
 	},
-	
+
 	assignAvailableWork: function(workerRequest) {
+		checkWorkerRequest(workerRequest);
+
 		var serviceRequest = matchAvailableServiceRequest(workerRequest.capabilities);
 		if (gs.nil(serviceRequest)) {
 			return;
@@ -25,11 +27,10 @@ ServiceRequestManagement.prototype = {
 	},
 
 	scheduleService: function(serviceRequest) {
+		checkServiceRequest(serviceRequest);
 
 		var scheduledTime = deriveScheduledTime(serviceRequest);
 		var priority = derivePriority(serviceRequest);
-
-		// todo: check for duplicate token -- if found then error!
 
 		var state = 'created';
 
@@ -53,53 +54,11 @@ ServiceRequestManagement.prototype = {
 		trackServiceRequestState(sys_id, state);
 
 		var schedule = {};
-		schedule.sys_id = sys_id;
+		schedule.token = serviceRequest.token;
 		schedule.scheduledTime = scheduledTime.getDisplayValue();
 		schedule.priority = priority;
 		schedule.state = state;
 		return schedule;
-	},
-
-	checkServiceRequest: function(serviceRequest) {
-		// Parameter validation
-		if (gs.nil(serviceRequest) || gs.nil(serviceRequest.token) ||
-			gs.nil(serviceRequest.instance_name) || gs.nil(serviceRequest.instance_url) ||
-			gs.nil(serviceRequest.instance_id) || gs.nil(serviceRequest.node_id) ||
-			gs.nil(serviceRequest.node_url)
-		) {
-			return "serviceRequest parameter is malformed. It requires the following fields: token, instance_name, instance_url, instance_id, node_id, node_url, capability";
-		}
-
-		var error = checkCapability(serviceRequest.capability);
-		if (!gs.nil(error)) {
-			return error;
-		}
-		
-		// Make sure the token does not already exist.
-		var count = new GlideAggregate("sn_service_request_service_request");
-		count.addQuery("token", serviceRequest.token);
-		count.addAggregate("COUNT");
-		count.query();
-		if (count.next()) {
-			if (count.getAggregate("COUNT") > 0) {
-				return "Service Request with token " + serviceRequest.token + " already exists.";
-			}
-		}
-	},
-
-	checkWorkerRequest: function(workerRequest) {
-		if (gs.nil(workerRequest) || gs.nil(workerRequest.workerId) || gs.nil(workerRequest.capabilities) ||
-			gs.nil(workerRequest.capabilities.length) || 0 == workerRequest.capabilities.length
-		) {
-			return "workerRequest is malformed. It requires the following fields: id, capabilities";
-		}
-
-		for (i = 0; i < workerRequest.capabilities.length; i++) {
-			var error = checkCapability(workerRequest.capabilities[i]);
-			if (!gs.nil(error)) {
-				return error;
-			}
-		}
 	},
 
 	cancel: function(serviceRequest) {
@@ -109,12 +68,6 @@ ServiceRequestManagement.prototype = {
 	type: 'ServiceRequestManagement'
 };
 
-function checkCapability(capability) {
-	if (gs.nil(capability) || gs.nil(capability.type) || gs.nil(capability.name) || gs.nil(capability.version)) {
-		return "capability is incomplete. It requires the following fields: type, name, version";
-	}
-}
-
 function deriveScheduledTime(jobRequest) {
 	// todo: in the future we may have more logic tied to this...
 	return new GlideDateTime();
@@ -123,6 +76,32 @@ function deriveScheduledTime(jobRequest) {
 function derivePriority(jobRequest) {
 	// todo: in the future we may have more logic tied to this...
 	return 100;
+}
+
+function assignWork(serviceRequestGlideRecord, workerId) {
+	var assignedState = "assigned";
+	serviceRequestGlideRecord.setValue("state", assignedState);
+	serviceRequestGlideRecord.setValue("assigned_worker_id", workerId);
+	serviceRequestGlideRecord.update(); // todo: check for null return value...this detects race condition and means no work assigned
+
+	trackServiceRequestState(serviceRequestGlideRecord.getUniqueValue(), assignedState);
+
+	var assignment = {};
+	assignment.coordinates = {};
+	assignment.capability = {};
+
+	assignment.coordinates.token = serviceRequestGlideRecord.getValue("token");
+	assignment.coordinates.instance_id = serviceRequestGlideRecord.getValue("instance_id");
+	assignment.coordinates.instance_name = serviceRequestGlideRecord.getValue("instance_name");
+	assignment.coordinates.instance_url = serviceRequestGlideRecord.getValue("instance_url");
+	assignment.coordinates.node_id = serviceRequestGlideRecord.getValue("node_id");
+	assignment.coordinates.node_url = serviceRequestGlideRecord.getValue("node_url");
+
+	assignment.capability.type = serviceRequestGlideRecord.getValue("capability_type");
+	assignment.capability.name = serviceRequestGlideRecord.getValue("capability_name");
+	assignment.capability.version = serviceRequestGlideRecord.getValue("capability_version");
+
+	return assignment;
 }
 
 function matchAvailableServiceRequest(workerCapabilities) {
@@ -138,7 +117,7 @@ function matchAvailableServiceRequest(workerCapabilities) {
 	sr.addQuery("capability_type", "IN", capabilityTypes.join());
 	sr.addQuery("capability_name", "IN", capabilityNames.join());
 	// todo: scheduled_time <= now
-	sr.orderBy("scheduled_time"); 
+	sr.orderBy("scheduled_time");
 	sr.query();
 	var match;
 	if (sr.next()) {
@@ -156,32 +135,6 @@ function matchAvailableServiceRequest(workerCapabilities) {
 	return match;
 }
 
-function assignWork(serviceRequestGlideRecord, workerId) {
-	var assignedState = "assigned";
-	serviceRequestGlideRecord.setValue("state", assignedState);
-	serviceRequestGlideRecord.setValue("assigned_worker_id", workerId);
-	serviceRequestGlideRecord.update(); // todo: check for null return value...this detects race condition and means no work assigned
-	
-	trackServiceRequestState(serviceRequestGlideRecord.getUniqueValue(), assignedState);
-
-	var assignment = {};
-	assignment.coordinates = {};
-	assignment.capability = {};
-	
-	assignment.coordinates.token = serviceRequestGlideRecord.getValue("token");
-	assignment.coordinates.instance_id = serviceRequestGlideRecord.getValue("instance_id");
-	assignment.coordinates.instance_name = serviceRequestGlideRecord.getValue("instance_name");
-	assignment.coordinates.instance_url = serviceRequestGlideRecord.getValue("instance_url");
-	assignment.coordinates.node_id = serviceRequestGlideRecord.getValue("node_id");
-	assignment.coordinates.node_url = serviceRequestGlideRecord.getValue("node_url");
-	
-	assignment.capability.type = serviceRequestGlideRecord.getValue("capability_type");
-	assignment.capability.name = serviceRequestGlideRecord.getValue("capability_name");
-	assignment.capability.version = serviceRequestGlideRecord.getValue("capability_version");
-	
-	return assignment;
-}
-
 function trackServiceRequestState(serviceRequestSysId, state) {
 	var gr = new GlideRecord('sn_service_request_service_request_status');
 	gr.initialize();
@@ -191,13 +144,61 @@ function trackServiceRequestState(serviceRequestSysId, state) {
 
 	// todo: need to figure out a cascade-delete strategy
 }
+
+function checkServiceRequest(serviceRequest) {
+	// Parameter validation
+	if (gs.nil(serviceRequest) || gs.nil(serviceRequest.token) ||
+		gs.nil(serviceRequest.instance_name) || gs.nil(serviceRequest.instance_url) ||
+		gs.nil(serviceRequest.instance_id) || gs.nil(serviceRequest.node_id) ||
+		gs.nil(serviceRequest.node_url)
+	) {
+		throw "serviceRequest parameter is malformed. It requires the following fields: token, instance_name, instance_url, instance_id, node_id, node_url, capability";
+	}
+
+	var error = checkCapability(serviceRequest.capability);
+	if (!gs.nil(error)) {
+		throw error;
+	}
+
+	// Make sure the token does not already exist.
+	var count = new GlideAggregate("sn_service_request_service_request");
+	count.addQuery("token", serviceRequest.token);
+	count.addAggregate("COUNT");
+	count.query();
+	if (count.next()) {
+		if (count.getAggregate("COUNT") > 0) {
+			throw "Service Request with token " + serviceRequest.token + " already exists.";
+		}
+	}
+}
+
+function checkWorkerRequest(workerRequest) {
+	if (gs.nil(workerRequest) || gs.nil(workerRequest.workerId) || gs.nil(workerRequest.capabilities) ||
+		gs.nil(workerRequest.capabilities.length) || 0 == workerRequest.capabilities.length
+	) {
+		throw "workerRequest is malformed. It requires the following fields: id, capabilities";
+	}
+
+	for (i = 0; i < workerRequest.capabilities.length; i++) {
+		var error = checkCapability(workerRequest.capabilities[i]);
+		if (!gs.nil(error)) {
+			throw error;
+		}
+	}
+}
+
+function checkCapability(capability) {
+	if (gs.nil(capability) || gs.nil(capability.type) || gs.nil(capability.name) || gs.nil(capability.version)) {
+		throw "capability is incomplete. It requires the following fields: type, name, version";
+	}
+}
 ]]></script>
         <sys_class_name>sys_script_include</sys_class_name>
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2017-02-07 21:59:03</sys_created_on>
         <sys_customer_update>false</sys_customer_update>
         <sys_id>cddca3e13b703200d41a456993efc46a</sys_id>
-        <sys_mod_count>33</sys_mod_count>
+        <sys_mod_count>43</sys_mod_count>
         <sys_name>ServiceRequestManagement</sys_name>
         <sys_package display_value="Service Request Management" source="sn_service_request">c8a02be10b303200d109061437673a7b</sys_package>
         <sys_policy>read</sys_policy>
@@ -205,6 +206,6 @@ function trackServiceRequestState(serviceRequestSysId, state) {
         <sys_scope display_value="Service Request Management">c8a02be10b303200d109061437673a7b</sys_scope>
         <sys_update_name>sys_script_include_cddca3e13b703200d41a456993efc46a</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2017-02-08 20:52:56</sys_updated_on>
+        <sys_updated_on>2017-02-08 21:27:37</sys_updated_on>
     </sys_script_include>
 </record_update>

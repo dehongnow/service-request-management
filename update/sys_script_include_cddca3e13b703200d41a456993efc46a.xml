@@ -16,16 +16,52 @@ ServiceRequestManagement.prototype = {
 
 	},
 
+	assignNextAvailable: function() { // todo: accept a param containing worker id, capability
+
+		// todo: query based on "created", "scheduled_time" (now or in past)
+		// todo next: query based on matching capabilities
+
+		var serviceRequest = new GlideRecord("sn_service_request_service_request");
+		serviceRequest.addQuery("state", "created");
+		serviceRequest.orderBy("scheduled_time");
+		serviceRequest.setLimit(1);
+
+		serviceRequest.query();
+		if (serviceRequest.next()) {
+			// assign it
+			var assignedState = "assigned";
+			serviceRequest.setValue("state", assignedState);
+			serviceRequest.setValue("assigned_worker_id", "foobar"); // todo: get this from the method parameter
+			serviceRequest.update();			
+			trackState(serviceRequest.getUniqueValue(), assignedState);
+
+			var result = {};
+			result.token = serviceRequest.getValue("token");
+			result.instance_id = serviceRequest.getValue("instance_id");
+			result.instance_name = serviceRequest.getValue("instance_name");
+			result.instance_url = serviceRequest.getValue("instance_url");
+			result.node_id = serviceRequest.getValue("node_id");
+			result.node_url = serviceRequest.getValue("node_url");
+
+			// todo: include the capabilities too
+
+			return result;
+		}
+	},
+
 	schedule: function(serviceRequest) {
 
 		var scheduledTime = deriveScheduledTime(serviceRequest);
 		var priority = derivePriority(serviceRequest);
 
 		// todo: check for duplicate token -- if found then error!
+		
+		var state = 'created';
 
 		var gr = new GlideRecord('sn_service_request_service_request');
 		gr.initialize();
 		gr.token = serviceRequest.token;
+		gr.state = state;
 		gr.instance_name = serviceRequest.instance_name;
 		gr.instance_id = serviceRequest.instance_id;
 		gr.instance_url = serviceRequest.instance_url;
@@ -39,7 +75,7 @@ ServiceRequestManagement.prototype = {
 		gr.requested_by = gs.getUserName();
 		var sys_id = gr.insert();
 
-		var state = initState(sys_id);
+		trackState(sys_id, state);
 
 		var schedule = {};
 		schedule.sys_id = sys_id;
@@ -64,7 +100,6 @@ ServiceRequestManagement.prototype = {
 	cancel: function(serviceRequest) {
 
 	},
-	
 
 	type: 'ServiceRequestManagement'
 };
@@ -80,15 +115,13 @@ function derivePriority(jobRequest) {
 	return 100;
 }
 
-function initState(serviceRequestSysId) {
-	var defaultState = 'created';
+function trackState(serviceRequestSysId, state) {
 	var gr = new GlideRecord('sn_service_request_service_request_status');
 	gr.initialize();
 	gr.service_request = serviceRequestSysId;
-	gr.state = defaultState;
+	gr.state = state;
 	gr.insert();
 
-	return defaultState;
 	// todo: need to figure out a cascade-delete strategy
 }
 ]]></script>
@@ -97,7 +130,7 @@ function initState(serviceRequestSysId) {
         <sys_created_on>2017-02-07 21:59:03</sys_created_on>
         <sys_customer_update>false</sys_customer_update>
         <sys_id>cddca3e13b703200d41a456993efc46a</sys_id>
-        <sys_mod_count>3</sys_mod_count>
+        <sys_mod_count>10</sys_mod_count>
         <sys_name>ServiceRequestManagement</sys_name>
         <sys_package display_value="Service Request Management" source="sn_service_request">c8a02be10b303200d109061437673a7b</sys_package>
         <sys_policy>read</sys_policy>
@@ -105,6 +138,6 @@ function initState(serviceRequestSysId) {
         <sys_scope display_value="Service Request Management">c8a02be10b303200d109061437673a7b</sys_scope>
         <sys_update_name>sys_script_include_cddca3e13b703200d41a456993efc46a</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2017-02-07 22:43:40</sys_updated_on>
+        <sys_updated_on>2017-02-08 00:45:46</sys_updated_on>
     </sys_script_include>
 </record_update>

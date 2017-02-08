@@ -11,11 +11,7 @@
 ServiceRequestManagement.prototype = {
 	initialize: function() {
 	},
-
-	find: function(serviceRequest) {
-		// todo: implement
-	},
-
+	
 	assignAvailableWork: function(workerRequest) {
 		var serviceRequest = matchAvailableServiceRequest(workerRequest.capabilities);
 		if (gs.nil(serviceRequest)) {
@@ -65,6 +61,7 @@ ServiceRequestManagement.prototype = {
 	},
 
 	checkServiceRequest: function(serviceRequest) {
+		// Parameter validation
 		if (gs.nil(serviceRequest) || gs.nil(serviceRequest.token) ||
 			gs.nil(serviceRequest.instance_name) || gs.nil(serviceRequest.instance_url) ||
 			gs.nil(serviceRequest.instance_id) || gs.nil(serviceRequest.node_id) ||
@@ -73,7 +70,21 @@ ServiceRequestManagement.prototype = {
 			return "serviceRequest parameter is malformed. It requires the following fields: token, instance_name, instance_url, instance_id, node_id, node_url, capability";
 		}
 
-		return checkCapability(serviceRequest.capability);
+		var error = checkCapability(serviceRequest.capability);
+		if (!gs.nil(error)) {
+			return error;
+		}
+		
+		// Make sure the token does not already exist.
+		var count = new GlideAggregate("sn_service_request_service_request");
+		count.addQuery("token", serviceRequest.token);
+		count.addAggregate("COUNT");
+		count.query();
+		if (count.next()) {
+			if (count.getAggregate("COUNT") > 0) {
+				return "Service Request with token " + serviceRequest.token + " already exists.";
+			}
+		}
 	},
 
 	checkWorkerRequest: function(workerRequest) {
@@ -186,7 +197,7 @@ function trackServiceRequestState(serviceRequestSysId, state) {
         <sys_created_on>2017-02-07 21:59:03</sys_created_on>
         <sys_customer_update>false</sys_customer_update>
         <sys_id>cddca3e13b703200d41a456993efc46a</sys_id>
-        <sys_mod_count>29</sys_mod_count>
+        <sys_mod_count>33</sys_mod_count>
         <sys_name>ServiceRequestManagement</sys_name>
         <sys_package display_value="Service Request Management" source="sn_service_request">c8a02be10b303200d109061437673a7b</sys_package>
         <sys_policy>read</sys_policy>
@@ -194,6 +205,6 @@ function trackServiceRequestState(serviceRequestSysId, state) {
         <sys_scope display_value="Service Request Management">c8a02be10b303200d109061437673a7b</sys_scope>
         <sys_update_name>sys_script_include_cddca3e13b703200d41a456993efc46a</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2017-02-08 20:29:02</sys_updated_on>
+        <sys_updated_on>2017-02-08 20:52:56</sys_updated_on>
     </sys_script_include>
 </record_update>

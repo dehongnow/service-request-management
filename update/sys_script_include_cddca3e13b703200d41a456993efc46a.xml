@@ -14,11 +14,8 @@ ServiceRequestManagement.prototype = {
 
 	assignAvailableWork: function(workerRequest) {
 		checkWorkerRequest(workerRequest);
-		gs.info("assignAvailableWork -- back from checkWorkerRequest");
 		var workerGlideRecord = registerWorker(workerRequest);
-		gs.info("assignAvailableWork -- back from registerWorker");
 		var serviceRequestGlideRecord = matchAvailableServiceRequest(workerRequest.capabilities);
-		gs.info("assignAvailableWork -- back from matchAvailableServiceRequest");
 		return !gs.nil(serviceRequestGlideRecord) ? assignWork(serviceRequestGlideRecord, workerGlideRecord) : null;
 	},
 
@@ -84,7 +81,6 @@ function loadCapability(capability, insertIfMissing) {
 	existingCapability.addQuery("version", capability.version);
 	existingCapability.query();
 	if (existingCapability.next()) {
-		gs.info("leaving loadCapability with existing");
 		return existingCapability;
 	} else if (!gs.nil(insertIfMissing) && true == insertIfMissing) {
 		var newCapability = new GlideRecord(capabilityTableName);
@@ -93,7 +89,6 @@ function loadCapability(capability, insertIfMissing) {
 		newCapability.name = capability.name;
 		newCapability.version = capability.version;
 		newCapability.insert();
-		gs.info("leaving loadCapability with new");
 		return newCapability;
 	}
 }
@@ -183,7 +178,7 @@ function registerWorker(workerRequest) {
 	if (existingWorker.next()) {
 		worker = existingWorker;
 		if (existingWorker.getValue("capabilities_hash") != capabilitiesHash) {
-			existingWorker.capabilities_hash = capabilitiesHash;
+			existingWorker.setValue("capabilities_hash", capabilitiesHash);
 			existingWorker.update();
 			saveCapabilities = true;
 		}
@@ -198,8 +193,17 @@ function registerWorker(workerRequest) {
 	}
 
 	if (saveCapabilities) {
+		var resetWorkerCapabilities = new GlideRecord('sn_service_request_worker_capability');
+		resetWorkerCapabilities.initialize();
+		resetWorkerCapabilities.addQuery("worker", worker.getUniqueValue());
+		resetWorkerCapabilities.deleteMultiple();
+
 		for (i = 0; i < workerRequest.capabilities.length; i++) {
-			loadCapability(workerRequest.capabilities[i], true);
+			var workerCapability = new GlideRecord('sn_service_request_worker_capability');
+			workerCapability.initialize();
+			workerCapability.worker = worker.getUniqueValue();
+			workerCapability.capability = loadCapability(workerRequest.capabilities[i], true).getUniqueValue();
+			workerCapability.insert();
 		}
 	}
 
@@ -207,11 +211,11 @@ function registerWorker(workerRequest) {
 }
 
 function trackServiceRequestState(serviceRequestSysId, state) {
-	var gr = new GlideRecord('sn_service_request_service_request_status');
-	gr.initialize();
-	gr.service_request = serviceRequestSysId;
-	gr.state = state;
-	gr.insert();
+	var statusGlideRecord = new GlideRecord('sn_service_request_service_request_status');
+	statusGlideRecord.initialize();
+	statusGlideRecord.service_request = serviceRequestSysId;
+	statusGlideRecord.state = state;
+	statusGlideRecord.insert();
 
 	// todo: need to figure out a cascade-delete strategy
 }
@@ -312,7 +316,7 @@ function stringToHashCode(str){
         <sys_created_on>2017-02-07 21:59:03</sys_created_on>
         <sys_customer_update>false</sys_customer_update>
         <sys_id>cddca3e13b703200d41a456993efc46a</sys_id>
-        <sys_mod_count>87</sys_mod_count>
+        <sys_mod_count>91</sys_mod_count>
         <sys_name>ServiceRequestManagement</sys_name>
         <sys_package display_value="Service Request Management" source="sn_service_request">c8a02be10b303200d109061437673a7b</sys_package>
         <sys_policy>read</sys_policy>
@@ -320,6 +324,6 @@ function stringToHashCode(str){
         <sys_scope display_value="Service Request Management">c8a02be10b303200d109061437673a7b</sys_scope>
         <sys_update_name>sys_script_include_cddca3e13b703200d41a456993efc46a</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2017-02-09 23:18:44</sys_updated_on>
+        <sys_updated_on>2017-02-09 23:50:55</sys_updated_on>
     </sys_script_include>
 </record_update>

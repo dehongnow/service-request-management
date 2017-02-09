@@ -14,13 +14,15 @@ ServiceRequestManagement.prototype = {
 
 	assignAvailableWork: function(workerRequest) {
 		checkWorkerRequest(workerRequest);
-
+		gs.info("assignAvailableWork -- back from checkWorkerRequest");
+		var workerGlideRecord = registerWorker(workerRequest);
+		gs.info("assignAvailableWork -- back from registerWorker");
 		var serviceRequestGlideRecord = matchAvailableServiceRequest(workerRequest.capabilities);
-		return !gs.nil(serviceRequestGlideRecord) ? assignWork(serviceRequestGlideRecord, workerRequest.workerId) : null;
+		gs.info("assignAvailableWork -- back from matchAvailableServiceRequest");
+		return !gs.nil(serviceRequestGlideRecord) ? assignWork(serviceRequestGlideRecord, workerGlideRecord) : null;
 	},
 
 	scheduleService: function(serviceRequest) {
-
 		checkServiceRequest(serviceRequest);
 
 		var scheduledTime = deriveScheduledTime(serviceRequest);
@@ -74,7 +76,7 @@ function derivePriority(serviceRequest) {
 
 function loadCapability(capability, insertIfMissing) {
 	var capabilityTableName = "sn_service_request_capability";
-	
+
 	var existingCapability = new GlideRecord(capabilityTableName);
 	existingCapability.initialize();
 	existingCapability.addQuery("type", capability.type);
@@ -82,6 +84,7 @@ function loadCapability(capability, insertIfMissing) {
 	existingCapability.addQuery("version", capability.version);
 	existingCapability.query();
 	if (existingCapability.next()) {
+		gs.info("leaving loadCapability with existing");
 		return existingCapability;
 	} else if (!gs.nil(insertIfMissing) && true == insertIfMissing) {
 		var newCapability = new GlideRecord(capabilityTableName);
@@ -90,11 +93,12 @@ function loadCapability(capability, insertIfMissing) {
 		newCapability.name = capability.name;
 		newCapability.version = capability.version;
 		newCapability.insert();
+		gs.info("leaving loadCapability with new");
 		return newCapability;
 	}
 }
 
-function assignWork(serviceRequestGlideRecord, workerId) {
+function assignWork(serviceRequestGlideRecord, workerGlideRecord) {
 	// A given service request (token) can only be assigned once. No re-assignment.
 
 	// Unfortunately, scoped apps don't have access to the GlideMutex library (sigh...).  Since we cannot lock
@@ -111,14 +115,17 @@ function assignWork(serviceRequestGlideRecord, workerId) {
 	serviceRequestGlideRecord.update();
 	var modCountAfter = serviceRequestGlideRecord.getValue("sys_mod_count");
 	if (modCountAfter == modCountBefore) {
-		gs.info("Service Request " + serviceRequestGlideRecord.getValue("token") + " has already been assigned to worker " +
-			serviceRequestGlideRecord.getValue("assigned_worker_id") + ". NOT reassigning worker " + workerId + " to it.");
+		gs.info("Service Request " + serviceRequestGlideRecord.getValue("token") + " has already been assigned. " +
+			"Re-assignment is NOT permitted.");
 		return;
 	}
 
-	// Safe (not a re-assignment race condition). Finishing assigning.
-	serviceRequestGlideRecord.setValue("assigned_worker_id", workerId);
-	serviceRequestGlideRecord.update();
+	// Not a re-assignment race condition :-) so complete the assignment.
+	var assignmentGlideRecord = new GlideRecord("sn_service_request_assignment");
+	assignmentGlideRecord.initialize();
+	assignmentGlideRecord.service_request = serviceRequestGlideRecord.getUniqueValue();
+	assignmentGlideRecord.worker = workerGlideRecord.getUniqueValue();
+	assignmentGlideRecord.insert();
 
 	trackServiceRequestState(serviceRequestGlideRecord.getUniqueValue(), assignedState);
 
@@ -163,6 +170,42 @@ function matchAvailableServiceRequest(workerCapabilities) {
 	}
 }
 
+function registerWorker(workerRequest) {
+	var workerTableName = "sn_service_request_worker";
+	var capabilitiesHash = stringToHashCode(stringifyCapablities(workerRequest.capabilities));
+	var saveCapabilities = false;
+	var worker;
+
+	var existingWorker = new GlideRecord(workerTableName);
+	existingWorker.initialize();
+	existingWorker.addQuery("name", workerRequest.name);
+	existingWorker.query();
+	if (existingWorker.next()) {
+		worker = existingWorker;
+		if (existingWorker.getValue("capabilities_hash") != capabilitiesHash) {
+			existingWorker.capabilities_hash = capabilitiesHash;
+			existingWorker.update();
+			saveCapabilities = true;
+		}
+	} else {
+		var newWorker = new GlideRecord(workerTableName);
+		newWorker.initialize();
+		newWorker.name = workerRequest.name;
+		newWorker.capabilities_hash = capabilitiesHash;
+		newWorker.insert();
+		worker = newWorker;
+		saveCapabilities = true;
+	}
+
+	if (saveCapabilities) {
+		for (i = 0; i < workerRequest.capabilities.length; i++) {
+			loadCapability(workerRequest.capabilities[i], true);
+		}
+	}
+
+	return worker;
+}
+
 function trackServiceRequestState(serviceRequestSysId, state) {
 	var gr = new GlideRecord('sn_service_request_service_request_status');
 	gr.initialize();
@@ -202,10 +245,10 @@ function checkServiceRequest(serviceRequest) {
 }
 
 function checkWorkerRequest(workerRequest) {
-	if (gs.nil(workerRequest) || gs.nil(workerRequest.workerId) || gs.nil(workerRequest.capabilities) ||
+	if (gs.nil(workerRequest) || gs.nil(workerRequest.name) || gs.nil(workerRequest.capabilities) ||
 		gs.nil(workerRequest.capabilities.length) || 0 == workerRequest.capabilities.length
 	) {
-		throw "workerRequest is malformed. It requires the following fields: id, capabilities";
+		throw "workerRequest is malformed. It requires the following fields: name, capabilities";
 	}
 
 	for (i = 0; i < workerRequest.capabilities.length; i++) {
@@ -221,13 +264,55 @@ function checkCapability(capability) {
 		throw "capability is incomplete. It requires the following fields: type, name, version";
 	}
 }
+
+function stringifyCapablities(capabablities) {
+	if (gs.nil(capabablities) || gs.nil(capabablities.length) == null || capabablities.length == 0) {
+		return;
+	}
+
+	var i, k;
+	var keys = [];
+	var capabilitiesMap = [capabablities.length];
+
+	for (i = 0; i < capabablities.length; i++) {
+		var capabablity = capabablities[i];
+		keys.push(capabablity.name);
+		capabilitiesMap[capabablity.name] = capabablity;
+	}
+
+	keys.sort();
+	var len = keys.length;
+	var str = "";
+
+	for (i = 0; i < len; i++) {
+		if (i > 0) {
+			str += "; ";
+		}
+		k = keys[i];
+		var capability = capabilitiesMap[k];
+		str += "[" + i + "] = type:" + capability.type + ", name:" + capability.name + ", version:" + capability.version;
+	}
+
+	return str;
+}
+
+function stringToHashCode(str){
+	var hash = 0;
+	if (str.length == 0) return hash;
+	for (i = 0; i < str.length; i++) {
+		var ch = str.charCodeAt(i);
+		hash = ((hash<<5)-hash)+ch;
+		hash = hash & hash;
+	}
+	return hash;
+}
 ]]></script>
         <sys_class_name>sys_script_include</sys_class_name>
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2017-02-07 21:59:03</sys_created_on>
         <sys_customer_update>false</sys_customer_update>
         <sys_id>cddca3e13b703200d41a456993efc46a</sys_id>
-        <sys_mod_count>82</sys_mod_count>
+        <sys_mod_count>87</sys_mod_count>
         <sys_name>ServiceRequestManagement</sys_name>
         <sys_package display_value="Service Request Management" source="sn_service_request">c8a02be10b303200d109061437673a7b</sys_package>
         <sys_policy>read</sys_policy>
@@ -235,6 +320,6 @@ function checkCapability(capability) {
         <sys_scope display_value="Service Request Management">c8a02be10b303200d109061437673a7b</sys_scope>
         <sys_update_name>sys_script_include_cddca3e13b703200d41a456993efc46a</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2017-02-09 19:33:59</sys_updated_on>
+        <sys_updated_on>2017-02-09 23:18:44</sys_updated_on>
     </sys_script_include>
 </record_update>

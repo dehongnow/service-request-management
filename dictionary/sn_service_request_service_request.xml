@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <database>
     <element label="Service Request" max_length="40" name="sn_service_request_service_request" type="collection">
-        <element label="Assigned Worker ID" max_length="40" name="assigned_worker_id" type="string"/>
         <element label="Capability" max_length="32" name="capability" reference="sn_service_request_capability" type="reference"/>
         <element label="Instance ID" max_length="40" name="instance_id" type="string"/>
         <element label="Instance Name" max_length="255" name="instance_name" type="string"/>
         <element label="Instance URL" max_length="255" name="instance_url" type="string"/>
+        <element default="30" label="Max Drift" max_length="40" name="max_drift" type="integer"/>
         <element label="Node ID" max_length="40" name="node_id" type="string"/>
         <element label="Node URL" max_length="255" name="node_url" type="string"/>
         <element label="Priority" max_length="40" name="priority" type="integer"/>

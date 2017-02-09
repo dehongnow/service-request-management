@@ -2,9 +2,6 @@
 <database>
     <element label="Service Request" max_length="40" name="sn_service_request_service_request" type="collection">
         <element label="Assigned Worker ID" max_length="40" name="assigned_worker_id" type="string"/>
-        <element label="Capability Name" max_length="40" name="capability_name" type="string"/>
-        <element label="Capability Type" max_length="40" name="capability_type" type="string"/>
-        <element label="Capability Version" max_length="40" name="capability_version" type="string"/>
         <element label="Instance ID" max_length="40" name="instance_id" type="string"/>
         <element label="Instance Name" max_length="255" name="instance_name" type="string"/>
         <element label="Instance URL" max_length="255" name="instance_url" type="string"/>
@@ -12,13 +9,13 @@
         <element label="Node URL" max_length="255" name="node_url" type="string"/>
         <element label="Priority" max_length="40" name="priority" type="integer"/>
         <element label="Scheduled Time" max_length="40" name="scheduled_time" type="glide_date_time"/>
-        <element label="Service Capability" max_length="32" name="service_capability" reference="sn_service_request_service_capability" type="reference"/>
         <element choice="1" default="created" label="State" max_length="40" name="state" type="choice">
             <choice/>
         </element>
         <element label="Token" max_length="40" name="token" type="string"/>
+        <element label="Work Capability" max_length="32" name="work_capability" reference="sn_service_request_work_capability" type="reference"/>
         <index name="index">
-            <element name="service_capability"/>
+            <element name="work_capability"/>
         </index>
     </element>
 </database>

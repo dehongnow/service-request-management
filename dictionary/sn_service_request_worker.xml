@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<database>
+    <element label="Worker" max_length="40" name="sn_service_request_worker" type="collection">
+        <element label="Name" max_length="255" name="name" text_index="true" type="string"/>
+    </element>
+</database>

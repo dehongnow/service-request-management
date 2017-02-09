@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <record_update>
-    <sys_dictionary action="INSERT_OR_UPDATE" element="token" table="sn_service_request_service_request">
+    <sys_dictionary action="INSERT_OR_UPDATE" element="version" table="sn_service_request_capability">
         <active>true</active>
         <array>false</array>
         <array_denormalized>false</array_denormalized>
@@ -15,7 +15,7 @@
         <choice/>
         <choice_field/>
         <choice_table/>
-        <column_label>Token</column_label>
+        <column_label>Version</column_label>
         <comments/>
         <create_roles/>
         <default_value/>
@@ -28,13 +28,13 @@
         <dynamic_creation_script/>
         <dynamic_default_value/>
         <dynamic_ref_qual/>
-        <element>token</element>
+        <element>version</element>
         <element_reference>false</element_reference>
         <foreign_database/>
         <internal_type display_value="String">string</internal_type>
         <mandatory>false</mandatory>
-        <max_length>255</max_length>
-        <name>sn_service_request_service_request</name>
+        <max_length>40</max_length>
+        <name>sn_service_request_capability</name>
         <next_element/>
         <primary>false</primary>
         <read_only>false</read_only>
@@ -51,18 +51,18 @@
         <staged>false</staged>
         <sys_class_name>sys_dictionary</sys_class_name>
         <sys_created_by>admin</sys_created_by>
-        <sys_created_on>2017-02-07 21:23:36</sys_created_on>
+        <sys_created_on>2017-02-09 19:30:22</sys_created_on>
         <sys_customer_update>false</sys_customer_update>
-        <sys_id>9c7c27a13b703200d41a456993efc4b1</sys_id>
-        <sys_mod_count>2</sys_mod_count>
-        <sys_name>Token</sys_name>
+        <sys_id>58be1d963b303200d41a456993efc4b6</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>Version</sys_name>
         <sys_package display_value="Service Request Management" source="sn_service_request">c8a02be10b303200d109061437673a7b</sys_package>
         <sys_policy/>
         <sys_replace_on_upgrade>false</sys_replace_on_upgrade>
         <sys_scope display_value="Service Request Management">c8a02be10b303200d109061437673a7b</sys_scope>
-        <sys_update_name>sys_dictionary_sn_service_request_service_request_token</sys_update_name>
+        <sys_update_name>sys_dictionary_sn_service_request_capability_version</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2017-02-09 19:34:43</sys_updated_on>
+        <sys_updated_on>2017-02-09 19:30:22</sys_updated_on>
         <table_reference>false</table_reference>
         <text_index>true</text_index>
         <unique>false</unique>

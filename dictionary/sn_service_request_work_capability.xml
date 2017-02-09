@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<database>
-    <element label="Work Capability" max_length="40" name="sn_service_request_work_capability" type="collection">
-        <element label="Name" max_length="40" name="name" text_index="true" type="string"/>
-        <element label="Type" max_length="40" name="type" text_index="true" type="string"/>
-        <element label="Version" max_length="40" name="version" text_index="true" type="string"/>
-    </element>
-</database>

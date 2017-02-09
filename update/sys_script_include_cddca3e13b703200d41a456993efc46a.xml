@@ -32,7 +32,7 @@ ServiceRequestManagement.prototype = {
 		serviceRequestGlideRecord.initialize();
 		serviceRequestGlideRecord.token = serviceRequest.token;
 		serviceRequestGlideRecord.state = initialState;
-		serviceRequestGlideRecord.work_capability = loadWorkCapability(serviceRequest.capability, true).getUniqueValue();
+		serviceRequestGlideRecord.capability = loadCapability(serviceRequest.capability, true).getUniqueValue();
 		serviceRequestGlideRecord.instance_name = serviceRequest.instance_name;
 		serviceRequestGlideRecord.instance_id = serviceRequest.instance_id;
 		serviceRequestGlideRecord.instance_url = serviceRequest.instance_url;
@@ -72,8 +72,10 @@ function derivePriority(serviceRequest) {
 	return 100;
 }
 
-function loadWorkCapability(capability, insertIfMissing) {
-	var existingCapability = new GlideRecord("sn_service_request_work_capability");
+function loadCapability(capability, insertIfMissing) {
+	var capabilityTableName = "sn_service_request_capability";
+	
+	var existingCapability = new GlideRecord(capabilityTableName);
 	existingCapability.initialize();
 	existingCapability.addQuery("type", capability.type);
 	existingCapability.addQuery("name", capability.name);
@@ -82,7 +84,7 @@ function loadWorkCapability(capability, insertIfMissing) {
 	if (existingCapability.next()) {
 		return existingCapability;
 	} else if (!gs.nil(insertIfMissing) && true == insertIfMissing) {
-		var newCapability = new GlideRecord("sn_service_request_work_capability");
+		var newCapability = new GlideRecord(capabilityTableName);
 		newCapability.initialize();
 		newCapability.type = capability.type;
 		newCapability.name = capability.name;
@@ -130,7 +132,7 @@ function assignWork(serviceRequestGlideRecord, workerId) {
 	assignment.coordinates.node_id = serviceRequestGlideRecord.getValue("node_id");
 	assignment.coordinates.node_url = serviceRequestGlideRecord.getValue("node_url");
 
-	var workCapability = serviceRequestGlideRecord.work_capability.getRefRecord();
+	var workCapability = serviceRequestGlideRecord.capability.getRefRecord();
 	assignment.capability = {};
 	assignment.capability.type = workCapability.getValue("type");
 	assignment.capability.name = workCapability.getValue("name");
@@ -141,7 +143,7 @@ function assignWork(serviceRequestGlideRecord, workerId) {
 function matchAvailableServiceRequest(workerCapabilities) {
 	var matchingCapabilityIds = [];
 	for (i = 0; i < workerCapabilities.length; i++) {
-		var capability = loadWorkCapability(workerCapabilities[i], false);
+		var capability = loadCapability(workerCapabilities[i], false);
 		if (!gs.nil(capability)) {
 			matchingCapabilityIds.push(capability.getUniqueValue());
 		}
@@ -153,7 +155,7 @@ function matchAvailableServiceRequest(workerCapabilities) {
 	var serviceRequestGlideRecord = new GlideRecord("sn_service_request_service_request");
 	serviceRequestGlideRecord.addQuery("state", "created");
 	serviceRequestGlideRecord.addQuery("scheduled_time", "<=", new GlideDateTime());
-	serviceRequestGlideRecord.addQuery("work_capability", "IN", matchingCapabilityIds.join());
+	serviceRequestGlideRecord.addQuery("capability", "IN", matchingCapabilityIds.join());
 	serviceRequestGlideRecord.orderBy("scheduled_time"); // todo: also by priority...
 	serviceRequestGlideRecord.query();
 	if (serviceRequestGlideRecord.next()) {
@@ -225,7 +227,7 @@ function checkCapability(capability) {
         <sys_created_on>2017-02-07 21:59:03</sys_created_on>
         <sys_customer_update>false</sys_customer_update>
         <sys_id>cddca3e13b703200d41a456993efc46a</sys_id>
-        <sys_mod_count>81</sys_mod_count>
+        <sys_mod_count>82</sys_mod_count>
         <sys_name>ServiceRequestManagement</sys_name>
         <sys_package display_value="Service Request Management" source="sn_service_request">c8a02be10b303200d109061437673a7b</sys_package>
         <sys_policy>read</sys_policy>
@@ -233,6 +235,6 @@ function checkCapability(capability) {
         <sys_scope display_value="Service Request Management">c8a02be10b303200d109061437673a7b</sys_scope>
         <sys_update_name>sys_script_include_cddca3e13b703200d41a456993efc46a</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2017-02-09 18:37:44</sys_updated_on>
+        <sys_updated_on>2017-02-09 19:33:59</sys_updated_on>
     </sys_script_include>
 </record_update>

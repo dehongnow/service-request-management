@@ -16,17 +16,15 @@ ServiceRequestManagement.prototype = {
 		checkWorkerRequest(workerRequest);
 
 		var serviceRequest = matchAvailableServiceRequest(workerRequest.capabilities);
-		if (gs.nil(serviceRequest)) {
-			return;
-		}
+		var assignment = !gs.nil(serviceRequest) ? assignWork(serviceRequest, workerRequest.workerId) : null;
 
-		var assignment = assignWork(serviceRequest, workerRequest.workerId);
 		if (!gs.nil(assignment)) {
 			return assignment;
 		}
 	},
 
 	scheduleService: function(serviceRequest) {
+
 		checkServiceRequest(serviceRequest);
 
 		var scheduledTime = deriveScheduledTime(serviceRequest);
@@ -79,13 +77,32 @@ function derivePriority(jobRequest) {
 }
 
 function assignWork(serviceRequestGlideRecord, workerId) {
-	var assignedState = "assigned";
-	serviceRequestGlideRecord.setValue("state", assignedState);
+	// A given service request can only be assigned once. No re-assignment.
+	
+	// Unfortunately, scoped apps don't have access to the GlideMutex library (sigh...).  Since we cannot lock
+	// the service_request table we run the possibility of an assignment race condition (e.g. two independent
+	// worker id threads trying to assign themselves to the same service request). To mitigate that possibility
+	// we try to detect if setting the "state" to "assigned" represents no change in lifecycle state (by looking at
+	// the "sys_mod_count" before / after).  If the "sys_mod_count" didn't change then we've detected a race
+	// condition, log it and leave.	
+	
+	var modCountBefore = serviceRequestGlideRecord.getValue("sys_mod_count");
+	serviceRequestGlideRecord.setValue("state", "assigned");
+	serviceRequestGlideRecord.update();
+	var modCountAfter = serviceRequestGlideRecord.getValue("sys_mod_count");
+	if (modCountAfter == modCountBefore) {
+		gs.info("Service Request " + serviceRequestGlideRecord.getValue("token") + " has already been assigned to worker " +
+			serviceRequestGlideRecord.getValue("assigned_worker_id") + ". NOT reassigning worker " + workerId + " to it.");
+		return;
+	}
+	
+	// Safe (not a re-assignment race condition). Finishing assigning.
 	serviceRequestGlideRecord.setValue("assigned_worker_id", workerId);
-	serviceRequestGlideRecord.update(); // todo: check for null return value...this detects race condition and means no work assigned
+	serviceRequestGlideRecord.update();
 
-	trackServiceRequestState(serviceRequestGlideRecord.getUniqueValue(), assignedState);
+	trackServiceRequestState(serviceRequestGlideRecord.getUniqueValue(), "assigned");
 
+	// Form a reply
 	var assignment = {};
 	assignment.coordinates = {};
 	assignment.capability = {};
@@ -111,7 +128,7 @@ function matchAvailableServiceRequest(workerCapabilities) {
 		capabilityTypes[i] = workerCapabilities[i].type;
 		capabilityNames[i] = workerCapabilities[i].name;
 	}
-	
+
 	var sr = new GlideRecord("sn_service_request_service_request");
 	sr.addQuery("state", "created");
 	sr.addQuery("scheduled_time", "<=", new GlideDateTime());
@@ -198,7 +215,7 @@ function checkCapability(capability) {
         <sys_created_on>2017-02-07 21:59:03</sys_created_on>
         <sys_customer_update>false</sys_customer_update>
         <sys_id>cddca3e13b703200d41a456993efc46a</sys_id>
-        <sys_mod_count>45</sys_mod_count>
+        <sys_mod_count>64</sys_mod_count>
         <sys_name>ServiceRequestManagement</sys_name>
         <sys_package display_value="Service Request Management" source="sn_service_request">c8a02be10b303200d109061437673a7b</sys_package>
         <sys_policy>read</sys_policy>
@@ -206,6 +223,6 @@ function checkCapability(capability) {
         <sys_scope display_value="Service Request Management">c8a02be10b303200d109061437673a7b</sys_scope>
         <sys_update_name>sys_script_include_cddca3e13b703200d41a456993efc46a</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2017-02-08 21:53:41</sys_updated_on>
+        <sys_updated_on>2017-02-09 00:49:06</sys_updated_on>
     </sys_script_include>
 </record_update>

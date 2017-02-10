@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>package_private</access>
+        <active>true</active>
+        <api_name>sn_service_request.CapabilityHelper</api_name>
+        <client_callable>false</client_callable>
+        <description/>
+        <name>CapabilityHelper</name>
+        <script><![CDATA[var CapabilityHelper = Class.create();
+CapabilityHelper.prototype = {
+	initialize: function() {
+		this.capabilityTableName = "sn_service_request_capability";
+	},
+
+	createFromRequest : function(requestedCapabilty) {
+		this.checkRequestedCapability(requestedCapabilty);
+		return new Capability(requestedCapabilty.kind, requestedCapabilty.name, requestedCapabilty.version);
+	},
+
+	createFromRequestedCapabilities : function(requestedCapabilitiesArray) {
+		if (gs.nil(requestedCapabilitiesArray) || gs.nil(requestedCapabilitiesArray.length) || 0 == requestedCapabilitiesArray.length) {
+			return requestedCapabilitiesArray;
+		}
+
+		var i, k;
+		var keys = [];
+		var capabilitiesMap = [requestedCapabilitiesArray.length];
+		for (i = 0; i < requestedCapabilitiesArray.length; i++) {
+			var requestedCapability = requestedCapabilitiesArray[i];
+			keys.push(requestedCapability.name);
+			capabilitiesMap[requestedCapability.name] = this.createFromRequest(requestedCapability);
+		}
+		keys.sort();
+
+		var capabilitiesArray = [];
+		var len = keys.length;
+		var prevStr;
+		for (i = 0; i < len; i++) {
+			k = keys[i];
+			var capability = capabilitiesMap[k];
+			var str = capability.toString();
+			if (gs.nil(prevStr) || prevStr != str) {
+				capabilitiesArray.push(capability);
+			}
+			prevStr = str;
+		}
+
+		return capabilitiesArray;
+	},
+
+	createFromGlideRecord : function(glideRecord) {
+		if (!gs.nil(glideRecord)) {
+			return new Capability(glideRecord.getValue("kind"), glideRecord.getValue("name"), glideRecord.getValue("version"));
+		}
+	},
+
+	createFromGlideRecords : function(glideRecordsArray) {
+		if (gs.nil(glideRecordsArray) || gs.nil(glideRecordsArray.length) || 0 == glideRecordsArray.length) {
+			return;
+		}
+
+		var capabilitiesArray = [];
+		var i;
+		for (i = 0; i < glideRecordsArray.length; i++) {
+			capabilitiesArray.push(this.createFromGlideRecord(glideRecordsArray[i]));
+		}
+		return capabilitiesArray;
+	},
+
+	loadGlideRecord : function(capability, insertIfMissing) {
+		var existingGlide = new GlideRecord(this.capabilityTableName);
+		existingGlide.initialize();
+		existingGlide.addQuery("kind", capability.kind);
+		existingGlide.addQuery("name", capability.name);
+		existingGlide.addQuery("version", capability.version);
+		existingGlide.query();
+		if (existingGlide.next()) {
+			return existingGlide;
+		} else if (!gs.nil(insertIfMissing) && true == insertIfMissing) {
+			var newGlide = new GlideRecord(this.capabilityTableName);
+			newGlide.initialize();
+			newGlide.kind = capability.kind;
+			newGlide.name = capability.name;
+			newGlide.version = capability.version;
+			newGlide.insert();
+			return newGlide;
+		}
+	},
+
+	buildDisplayString : function(capabilitiesArray) {
+		if (gs.nil(capabilitiesArray) || gs.nil(capabilitiesArray.length) || 0 == capabilitiesArray.length) {
+			return;
+		}
+
+		var i, prevStr;
+		var displayString = "";
+		for (i = 0; i < capabilitiesArray.length; i++) {
+			var capability = capabilitiesArray[i];
+			var str = capability.toString();
+			if (gs.nil(prevStr) || prevStr != str) {
+				displayString +=  "[" + i + "] = " + str;
+			}
+			prevStr = str;
+		}
+		return displayString;
+	},
+
+	stringToHashCode : function(str) {
+		var hash = 0, i;
+		if (str.length == 0) return hash;
+		for (i = 0; i < str.length; i++) {
+			var ch = str.charCodeAt(i);
+			hash = ((hash << 5) - hash) + ch;
+			hash = hash & hash;
+		}
+		return hash;
+	},
+
+	checkRequestedCapability : function(requestedCapability) {
+		if (gs.nil(requestedCapability) || gs.nil(requestedCapability.kind) || gs.nil(requestedCapability.name) || gs.nil(requestedCapability.version)) {
+			throw "capability is incomplete. It requires the following fields: kind, name, version";
+		}
+	},
+
+	type: 'CapabilityHelper'
+};]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2017-02-10 19:07:14</sys_created_on>
+        <sys_customer_update>false</sys_customer_update>
+        <sys_id>0813eaa63b303200d41a456993efc438</sys_id>
+        <sys_mod_count>3</sys_mod_count>
+        <sys_name>CapabilityHelper</sys_name>
+        <sys_package display_value="Service Request Management" source="sn_service_request">c8a02be10b303200d109061437673a7b</sys_package>
+        <sys_policy>read</sys_policy>
+        <sys_replace_on_upgrade>false</sys_replace_on_upgrade>
+        <sys_scope display_value="Service Request Management">c8a02be10b303200d109061437673a7b</sys_scope>
+        <sys_update_name>sys_script_include_0813eaa63b303200d41a456993efc438</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-02-10 20:40:26</sys_updated_on>
+    </sys_script_include>
+</record_update>

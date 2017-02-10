@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>package_private</access>
+        <active>true</active>
+        <api_name>sn_service_request.Capability</api_name>
+        <client_callable>false</client_callable>
+        <description/>
+        <name>Capability</name>
+        <script><![CDATA[var Capability = Class.create();
+Capability.prototype = {
+	initialize: function(kind, name, version) {
+		this.kind = kind;
+		this.name = name;
+		this.version = version;
+	},
+	
+	kind : this.type,
+	name : this.name,
+	version : this.version,
+
+	toString : function() {
+		return "kind:" + this.kind + ", name:" + this.name + ", version:" + this.version;	
+	},
+
+	hashCode : function() {
+		var str = this.displayValue(this);
+		var hash = 0, i;
+		if (str.length == 0) return hash;
+		for (i = 0; i < str.length; i++) {
+			var ch = str.charCodeAt(i);
+			hash = ((hash << 5) - hash) + ch;
+			hash = hash & hash;
+		}
+		return hash;
+	},
+
+	type: "Capability"
+};
+]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2017-02-10 18:58:24</sys_created_on>
+        <sys_customer_update>false</sys_customer_update>
+        <sys_id>4001a6a63b303200d41a456993efc466</sys_id>
+        <sys_mod_count>1</sys_mod_count>
+        <sys_name>Capability</sys_name>
+        <sys_package display_value="Service Request Management" source="sn_service_request">c8a02be10b303200d109061437673a7b</sys_package>
+        <sys_policy>read</sys_policy>
+        <sys_replace_on_upgrade>false</sys_replace_on_upgrade>
+        <sys_scope display_value="Service Request Management">c8a02be10b303200d109061437673a7b</sys_scope>
+        <sys_update_name>sys_script_include_4001a6a63b303200d41a456993efc466</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-02-10 20:42:21</sys_updated_on>
+    </sys_script_include>
+</record_update>

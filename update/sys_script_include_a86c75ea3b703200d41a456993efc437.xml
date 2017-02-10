@@ -10,32 +10,61 @@
         <script><![CDATA[var WorkOrderManagement = Class.create();
 WorkOrderManagement.prototype = {
 	initialize: function() {
+		this.capabilityHelper = new CapabilityHelper();
+		this.workOrderHistoryHelper = new WorkOrderHistoryHelper();
 	},
 
 	assignAvailable: function(requestingWorker) {
-		checkRequestingWorker(requestingWorker);
-		var worker = registerWorker(requestingWorker);
-		var workOrder = matchAvailableWorkOrder(requestingWorker.capabilities);
-		return !gs.nil(workOrder) ? assignWork(workOrder, worker) : null;
+		checkRequestingWorker(requestingWorker, this.capabilityHelper);
+		var worker = registerWorker(requestingWorker, this.capabilityHelper);
+		var workOrder = matchAvailableWorkOrder(requestingWorker.capabilities, this.capabilityHelper);
+		if (!gs.nil(workOrder)) {
+			if (gs.nil(assignWork(workOrder, worker))) {
+				return;
+			}
+
+			this.workOrderHistoryHelper.addEntry(workOrder.getUniqueValue(), "assigned");
+
+			// Form a reply
+			var assignmentReply = {};
+			assignmentReply.coordinates = {};
+			assignmentReply.coordinates.token = workOrder.getValue("token");
+			assignmentReply.coordinates.instance_id = workOrder.getValue("instance_id");
+			assignmentReply.coordinates.instance_name = workOrder.getValue("instance_name");
+			assignmentReply.coordinates.instance_url = workOrder.getValue("instance_url");
+			assignmentReply.coordinates.node_id = workOrder.getValue("node_id");
+			assignmentReply.coordinates.node_url = workOrder.getValue("node_url");
+
+			var capability = workOrder.capability.getRefRecord();
+			assignmentReply.capability = {};
+			assignmentReply.capability.kind = capability.getValue("kind");
+			assignmentReply.capability.name = capability.getValue("name");
+			assignmentReply.capability.version = capability.getValue("version");
+			return assignmentReply;
+		}
 	},
 
 	schedule: function(workOrderRequest) {
-		checkWorkOrderRequest(workOrderRequest);
+		checkWorkOrderRequest(workOrderRequest, this.capabilityHelper);
 
 		var scheduledTime = deriveScheduledTime(workOrderRequest);
 		var priority = derivePriority(workOrderRequest);
 
 		var initialState = 'created';
 
-		var capabilities = [];
-		capabilities.push(loadCapability(workOrderRequest.capability, true));
-		var capabilitiesHash = stringToHashCode(stringifyCapablities(capabilities));
+		var glideCapabilities = [];
+
+		var capability = this.capabilityHelper.createFromRequest(workOrderRequest.capability);
+		glideCapabilities.push(this.capabilityHelper.loadGlideRecord(capability, true));
+		var capabilities = this.capabilityHelper.createFromGlideRecords(glideCapabilities);
+		var capabilitiesStringified = this.capabilityHelper.buildDisplayString(capabilities);
+		var capabilitiesHash = this.capabilityHelper.stringToHashCode(capabilitiesStringified);
 
 		var workOrder = new GlideRecord("sn_service_request_work_order");
 		workOrder.initialize();
 		workOrder.token = workOrderRequest.token;
 		workOrder.state = initialState;
-		workOrder.capability = capabilities[0].getUniqueValue();
+		workOrder.capability = glideCapabilities[0].getUniqueValue();
 		workOrder.capability_hash = capabilitiesHash;
 		workOrder.instance_name = workOrderRequest.instance_name;
 		workOrder.instance_id = workOrderRequest.instance_id;
@@ -47,7 +76,7 @@ WorkOrderManagement.prototype = {
 		workOrder.requested_by = gs.getUserName();
 		var sys_id = workOrder.insert();
 
-		trackWorkOrderState(sys_id, initialState);
+		this.workOrderHistoryHelper.addEntry(sys_id, initialState);
 
 		// Form a reply
 		var workOrderReply = {};
@@ -76,26 +105,10 @@ function derivePriority(workOrderRequest) {
 	return 100;
 }
 
-function loadCapability(capabilityRequest, insertIfMissing) {
-	var capabilityTableName = "sn_service_request_capability";
-
-	var existingCapability = new GlideRecord(capabilityTableName);
-	existingCapability.initialize();
-	existingCapability.addQuery("type", capabilityRequest.type);
-	existingCapability.addQuery("name", capabilityRequest.name);
-	existingCapability.addQuery("version", capabilityRequest.version);
-	existingCapability.query();
-	if (existingCapability.next()) {
-		return existingCapability;
-	} else if (!gs.nil(insertIfMissing) && true == insertIfMissing) {
-		var newCapability = new GlideRecord(capabilityTableName);
-		newCapability.initialize();
-		newCapability.type = capabilityRequest.type;
-		newCapability.name = capabilityRequest.name;
-		newCapability.version = capabilityRequest.version;
-		newCapability.insert();
-		return newCapability;
-	}
+function loadCapabilityGlideRecord(requestedCapability, insertIfMissing, capabilityHelper) {
+	capabilityHelper.checkRequestedCapability(requestedCapability);
+	var capability = capabilityHelper.createFromRequest(requestedCapability);
+	return capabilityHelper.loadGlideRecord(capability, insertIfMissing);
 }
 
 function assignWork(workOrder, worker) {
@@ -108,10 +121,8 @@ function assignWork(workOrder, worker) {
 	// the "sys_mod_count" before / after).  If the "sys_mod_count" didn't change then we've detected a race
 	// condition, log it and leave.
 
-	var assignedState = "assigned";
-
 	var modCountBefore = workOrder.getValue("sys_mod_count");
-	workOrder.setValue("state", assignedState);
+	workOrder.setValue("state", "assigned");
 	workOrder.update();
 	var modCountAfter = workOrder.getValue("sys_mod_count");
 	if (modCountAfter == modCountBefore) {
@@ -127,33 +138,16 @@ function assignWork(workOrder, worker) {
 	assignment.worker = worker.getUniqueValue();
 	assignment.insert();
 
-	trackWorkOrderState(workOrder.getUniqueValue(), assignedState);
-
-	// Form a reply
-	var assignmentReply = {};
-	assignmentReply.coordinates = {};
-	assignmentReply.coordinates.token = workOrder.getValue("token");
-	assignmentReply.coordinates.instance_id = workOrder.getValue("instance_id");
-	assignmentReply.coordinates.instance_name = workOrder.getValue("instance_name");
-	assignmentReply.coordinates.instance_url = workOrder.getValue("instance_url");
-	assignmentReply.coordinates.node_id = workOrder.getValue("node_id");
-	assignmentReply.coordinates.node_url = workOrder.getValue("node_url");
-
-	var workCapability = workOrder.capability.getRefRecord();
-	assignmentReply.capability = {};
-	assignmentReply.capability.type = workCapability.getValue("type");
-	assignmentReply.capability.name = workCapability.getValue("name");
-	assignmentReply.capability.version = workCapability.getValue("version");
-	return assignmentReply;
+	return assignment;
 }
 
-function matchAvailableWorkOrder(requestedCapabilities) {
+function matchAvailableWorkOrder(requestedCapabilities, capabilityHelper) {
 	var requestedCapabilityHashes = [];
 	var i;
 	for (i = 0; i < requestedCapabilities.length; i++) {
-		var capabilities = [];
-		capabilities.push(loadCapability(requestedCapabilities[i], true));
-		requestedCapabilityHashes.push(stringToHashCode(stringifyCapablities(capabilities)));
+		var glideCapabilities = [];
+		glideCapabilities.push(capabilityHelper.createFromGlideRecord(loadCapabilityGlideRecord(requestedCapabilities[i], true, capabilityHelper)));
+		requestedCapabilityHashes.push(capabilityHelper.stringToHashCode(capabilityHelper.buildDisplayString(glideCapabilities)));
 	}
 	if (requestedCapabilityHashes.length == 0) {
 		return;
@@ -170,10 +164,13 @@ function matchAvailableWorkOrder(requestedCapabilities) {
 	}
 }
 
-function registerWorker(requestingWorker) {
+function registerWorker(requestingWorker, capabilityHelper) {
 	var workerTableName = "sn_service_request_worker";
-	var requestedCapabilitiesHash = stringToHashCode(stringifyCapablities(requestingWorker.capabilities));
+	var capabilities = capabilityHelper.createFromRequestedCapabilities(requestingWorker.capabilities);
+	var requestedCapabilitiesHash = capabilityHelper.stringToHashCode(capabilityHelper.buildDisplayString(capabilities));
+
 	var saveCapabilities = false;
+
 	var worker;
 
 	var existingWorker = new GlideRecord(workerTableName);
@@ -204,11 +201,11 @@ function registerWorker(requestingWorker) {
 		resetWorkerCapabilities.deleteMultiple();
 
 		var i;
-		for (i = 0; i < requestingWorker.capabilities.length; i++) {
+		for (i = 0; i < capabilities.length; i++) {
 			var workerCapability = new GlideRecord('sn_service_request_worker_capability');
 			workerCapability.initialize();
 			workerCapability.worker = worker.getUniqueValue();
-			workerCapability.capability = loadCapability(requestingWorker.capabilities[i], true).getUniqueValue();
+			workerCapability.capability = capabilityHelper.loadGlideRecord(capabilities[i], true).getUniqueValue();
 			workerCapability.insert();
 		}
 	}
@@ -216,17 +213,7 @@ function registerWorker(requestingWorker) {
 	return worker;
 }
 
-function trackWorkOrderState(workOrderSysId, state) {
-	var workHistoryEntry = new GlideRecord('sn_service_request_work_order_history');
-	workHistoryEntry.initialize();
-	workHistoryEntry.work_order = workOrderSysId;
-	workHistoryEntry.state = state;
-	workHistoryEntry.insert();
-
-	// todo: need to figure out a cascade-delete strategy
-}
-
-function checkWorkOrderRequest(workOrderRequest) {
+function checkWorkOrderRequest(workOrderRequest, capabilityHelper) {
 	// Parameter validation
 	if (gs.nil(workOrderRequest) || gs.nil(workOrderRequest.token) ||
 		gs.nil(workOrderRequest.instance_name) || gs.nil(workOrderRequest.instance_url) ||
@@ -237,7 +224,7 @@ function checkWorkOrderRequest(workOrderRequest) {
 		"instance_url, instance_id, node_id, node_url, capability";
 	}
 
-	var error = checkCapability(workOrderRequest.capability);
+	var error = capabilityHelper.checkRequestedCapability(workOrderRequest.capability);
 	if (!gs.nil(error)) {
 		throw error;
 	}
@@ -254,7 +241,7 @@ function checkWorkOrderRequest(workOrderRequest) {
 	}
 }
 
-function checkRequestingWorker(requestingWorker) {
+function checkRequestingWorker(requestingWorker, capabilityHelper) {
 	if (gs.nil(requestingWorker) || gs.nil(requestingWorker.name) || gs.nil(requestingWorker.capabilities) ||
 		gs.nil(requestingWorker.capabilities.length) || 0 == requestingWorker.capabilities.length
 	) {
@@ -263,59 +250,8 @@ function checkRequestingWorker(requestingWorker) {
 
 	var i;
 	for (i = 0; i < requestingWorker.capabilities.length; i++) {
-		var error = checkCapability(requestingWorker.capabilities[i]);
-		if (!gs.nil(error)) {
-			throw error;
-		}
+		capabilityHelper.checkRequestedCapability(requestingWorker.capabilities[i]);
 	}
-}
-
-function checkCapability(requestedCapability) {
-	if (gs.nil(requestedCapability) || gs.nil(requestedCapability.type) || gs.nil(requestedCapability.name) || gs.nil(requestedCapability.version)) {
-		throw "capability is incomplete. It requires the following fields: type, name, version";
-	}
-}
-
-function stringifyCapablities(requestedCapabablities) {
-	if (gs.nil(requestedCapabablities) || gs.nil(requestedCapabablities.length) == null || requestedCapabablities.length == 0) {
-		return;
-	}
-
-	var i, k;
-	var keys = [];
-	var capabilitiesMap = [requestedCapabablities.length];
-
-	for (i = 0; i < requestedCapabablities.length; i++) {
-		var capabablity = requestedCapabablities[i];
-		keys.push(capabablity.name);
-		capabilitiesMap[capabablity.name] = capabablity;
-	}
-
-	keys.sort();
-	var len = keys.length;
-	var str = "";
-
-	for (i = 0; i < len; i++) {
-		if (i > 0) {
-			str += "; ";
-		}
-		k = keys[i];
-		var capability = capabilitiesMap[k];
-		str += "[" + i + "] = type:" + capability.type + ", name:" + capability.name + ", version:" + capability.version;
-	}
-
-	return str;
-}
-
-function stringToHashCode(str){
-	var hash = 0, i;
-	if (str.length == 0) return hash;
-	for (i = 0; i < str.length; i++) {
-		var ch = str.charCodeAt(i);
-		hash = ((hash<<5)-hash)+ch;
-		hash = hash & hash;
-	}
-	return hash;
 }
 ]]></script>
         <sys_class_name>sys_script_include</sys_class_name>
@@ -323,7 +259,7 @@ function stringToHashCode(str){
         <sys_created_on>2017-02-10 16:18:18</sys_created_on>
         <sys_customer_update>false</sys_customer_update>
         <sys_id>a86c75ea3b703200d41a456993efc437</sys_id>
-        <sys_mod_count>4</sys_mod_count>
+        <sys_mod_count>22</sys_mod_count>
         <sys_name>WorkOrderManagement</sys_name>
         <sys_package display_value="Service Request Management" source="sn_service_request">c8a02be10b303200d109061437673a7b</sys_package>
         <sys_policy>read</sys_policy>
@@ -331,6 +267,6 @@ function stringToHashCode(str){
         <sys_scope display_value="Service Request Management">c8a02be10b303200d109061437673a7b</sys_scope>
         <sys_update_name>sys_script_include_a86c75ea3b703200d41a456993efc437</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2017-02-10 16:41:04</sys_updated_on>
+        <sys_updated_on>2017-02-10 21:28:19</sys_updated_on>
     </sys_script_include>
 </record_update>

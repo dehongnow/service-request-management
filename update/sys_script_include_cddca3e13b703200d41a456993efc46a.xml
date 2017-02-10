@@ -27,11 +27,16 @@ ServiceRequestManagement.prototype = {
 
 		var initialState = 'created';
 
+		var capabilities = [];
+		capabilities.push(loadCapability(serviceRequest.capability, true));
+		var capabilitiesHash = stringToHashCode(stringifyCapablities(capabilities));
+
 		var serviceRequestGlideRecord = new GlideRecord("sn_service_request_service_request");
 		serviceRequestGlideRecord.initialize();
 		serviceRequestGlideRecord.token = serviceRequest.token;
 		serviceRequestGlideRecord.state = initialState;
-		serviceRequestGlideRecord.capability = loadCapability(serviceRequest.capability, true).getUniqueValue();
+		serviceRequestGlideRecord.capability = capabilities[0].getUniqueValue();
+		serviceRequestGlideRecord.capability_hash = capabilitiesHash;
 		serviceRequestGlideRecord.instance_name = serviceRequest.instance_name;
 		serviceRequestGlideRecord.instance_id = serviceRequest.instance_id;
 		serviceRequestGlideRecord.instance_url = serviceRequest.instance_url;
@@ -115,7 +120,7 @@ function assignWork(serviceRequestGlideRecord, workerGlideRecord) {
 		return;
 	}
 
-	// Not a re-assignment race condition :-) so complete the assignment.
+	// Not a re-assignment race condition :-) so complete this assignment.
 	var assignmentGlideRecord = new GlideRecord("sn_service_request_assignment");
 	assignmentGlideRecord.initialize();
 	assignmentGlideRecord.service_request = serviceRequestGlideRecord.getUniqueValue();
@@ -143,21 +148,22 @@ function assignWork(serviceRequestGlideRecord, workerGlideRecord) {
 }
 
 function matchAvailableServiceRequest(workerCapabilities) {
-	var matchingCapabilityIds = [];
+	var workerCapabilityHashes = [];
+	var i;
 	for (i = 0; i < workerCapabilities.length; i++) {
-		var capability = loadCapability(workerCapabilities[i], false);
-		if (!gs.nil(capability)) {
-			matchingCapabilityIds.push(capability.getUniqueValue());
-		}
+		var capabilities = [];
+		capabilities.push(loadCapability(workerCapabilities[i], true));
+		var hash = stringToHashCode(stringifyCapablities(capabilities));
+		workerCapabilityHashes.push(hash);
 	}
-	if (matchingCapabilityIds.length == 0) {
+	if (workerCapabilityHashes.length == 0) {
 		return;
 	}
 
 	var serviceRequestGlideRecord = new GlideRecord("sn_service_request_service_request");
 	serviceRequestGlideRecord.addQuery("state", "created");
 	serviceRequestGlideRecord.addQuery("scheduled_time", "<=", new GlideDateTime());
-	serviceRequestGlideRecord.addQuery("capability", "IN", matchingCapabilityIds.join());
+	serviceRequestGlideRecord.addQuery("capability_hash", "IN", workerCapabilityHashes.join());
 	serviceRequestGlideRecord.orderBy("scheduled_time"); // todo: also by priority...
 	serviceRequestGlideRecord.query();
 	if (serviceRequestGlideRecord.next()) {
@@ -198,6 +204,7 @@ function registerWorker(workerRequest) {
 		resetWorkerCapabilities.addQuery("worker", worker.getUniqueValue());
 		resetWorkerCapabilities.deleteMultiple();
 
+		var i;
 		for (i = 0; i < workerRequest.capabilities.length; i++) {
 			var workerCapability = new GlideRecord('sn_service_request_worker_capability');
 			workerCapability.initialize();
@@ -255,6 +262,7 @@ function checkWorkerRequest(workerRequest) {
 		throw "workerRequest is malformed. It requires the following fields: name, capabilities";
 	}
 
+	var i;
 	for (i = 0; i < workerRequest.capabilities.length; i++) {
 		var error = checkCapability(workerRequest.capabilities[i]);
 		if (!gs.nil(error)) {
@@ -301,7 +309,7 @@ function stringifyCapablities(capabablities) {
 }
 
 function stringToHashCode(str){
-	var hash = 0;
+	var hash = 0, i;
 	if (str.length == 0) return hash;
 	for (i = 0; i < str.length; i++) {
 		var ch = str.charCodeAt(i);
@@ -316,7 +324,7 @@ function stringToHashCode(str){
         <sys_created_on>2017-02-07 21:59:03</sys_created_on>
         <sys_customer_update>false</sys_customer_update>
         <sys_id>cddca3e13b703200d41a456993efc46a</sys_id>
-        <sys_mod_count>91</sys_mod_count>
+        <sys_mod_count>103</sys_mod_count>
         <sys_name>ServiceRequestManagement</sys_name>
         <sys_package display_value="Service Request Management" source="sn_service_request">c8a02be10b303200d109061437673a7b</sys_package>
         <sys_policy>read</sys_policy>
@@ -324,6 +332,6 @@ function stringToHashCode(str){
         <sys_scope display_value="Service Request Management">c8a02be10b303200d109061437673a7b</sys_scope>
         <sys_update_name>sys_script_include_cddca3e13b703200d41a456993efc46a</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2017-02-09 23:50:55</sys_updated_on>
+        <sys_updated_on>2017-02-10 00:50:39</sys_updated_on>
     </sys_script_include>
 </record_update>

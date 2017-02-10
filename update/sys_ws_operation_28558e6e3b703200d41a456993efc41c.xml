@@ -7,7 +7,7 @@
         <default_operation_uri/>
         <enforce_acl/>
         <http_method>POST</http_method>
-        <name>Worker Request</name>
+        <name>Work Assignment</name>
         <operation_script><![CDATA[(function process(/*RESTAPIRequest*/ request, /*RESTAPIResponse*/ response) {
 	
 	var workerRequest = request.body.data;
@@ -30,7 +30,7 @@
 	}	
 	
 })(request, response);]]></operation_script>
-        <operation_uri>/api/sn_service_request/worker_request</operation_uri>
+        <operation_uri>/api/sn_service_request/work_assignment</operation_uri>
         <produces>application/json,application/xml,text/xml</produces>
         <produces_customized>false</produces_customized>
         <relative_path>/</relative_path>
@@ -40,19 +40,19 @@
         <short_description/>
         <sys_class_name>sys_ws_operation</sys_class_name>
         <sys_created_by>admin</sys_created_by>
-        <sys_created_on>2017-02-08 17:38:22</sys_created_on>
+        <sys_created_on>2017-02-10 16:57:09</sys_created_on>
         <sys_customer_update>false</sys_customer_update>
-        <sys_id>643b33753bb03200d41a456993efc4ad</sys_id>
-        <sys_mod_count>17</sys_mod_count>
-        <sys_name>Worker Request</sys_name>
+        <sys_id>28558e6e3b703200d41a456993efc41c</sys_id>
+        <sys_mod_count>1</sys_mod_count>
+        <sys_name>Work Assignment</sys_name>
         <sys_package display_value="Service Request Management" source="sn_service_request">c8a02be10b303200d109061437673a7b</sys_package>
         <sys_policy/>
         <sys_replace_on_upgrade>false</sys_replace_on_upgrade>
         <sys_scope display_value="Service Request Management">c8a02be10b303200d109061437673a7b</sys_scope>
-        <sys_update_name>sys_ws_operation_643b33753bb03200d41a456993efc4ad</sys_update_name>
+        <sys_update_name>sys_ws_operation_28558e6e3b703200d41a456993efc41c</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2017-02-10 16:23:47</sys_updated_on>
-        <web_service_definition display_value="Worker Request">102bff353bb03200d41a456993efc4c8</web_service_definition>
+        <sys_updated_on>2017-02-10 16:57:28</sys_updated_on>
+        <web_service_definition display_value="Work Assignment">7a350e6e3b703200d41a456993efc455</web_service_definition>
         <web_service_version/>
     </sys_ws_operation>
 </record_update>

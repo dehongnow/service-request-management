@@ -2,32 +2,32 @@
 <record_update table="sys_ws_definition">
     <sys_ws_definition action="INSERT_OR_UPDATE">
         <active>true</active>
-        <base_uri>/api/sn_service_request/worker_request</base_uri>
+        <base_uri>/api/sn_service_request/work_order</base_uri>
         <consumes>application/json,application/xml,text/xml</consumes>
         <consumes_customized>false</consumes_customized>
         <default_version>No active default version</default_version>
         <doc_link/>
         <enforce_acl/>
         <is_versioned>false</is_versioned>
-        <name>Worker Request</name>
+        <name>Work Order</name>
         <namespace>sn_service_request</namespace>
         <produces>application/json,application/xml,text/xml</produces>
         <produces_customized>false</produces_customized>
-        <service_id>worker_request</service_id>
+        <service_id>work_order</service_id>
         <short_description/>
         <sys_class_name>sys_ws_definition</sys_class_name>
         <sys_created_by>admin</sys_created_by>
-        <sys_created_on>2017-02-08 17:36:30</sys_created_on>
+        <sys_created_on>2017-02-10 16:53:59</sys_created_on>
         <sys_customer_update>false</sys_customer_update>
-        <sys_id>102bff353bb03200d41a456993efc4c8</sys_id>
+        <sys_id>f894066e3b703200d41a456993efc477</sys_id>
         <sys_mod_count>0</sys_mod_count>
-        <sys_name>Worker Request</sys_name>
+        <sys_name>Work Order</sys_name>
         <sys_package display_value="Service Request Management" source="sn_service_request">c8a02be10b303200d109061437673a7b</sys_package>
         <sys_policy/>
         <sys_replace_on_upgrade>false</sys_replace_on_upgrade>
         <sys_scope display_value="Service Request Management">c8a02be10b303200d109061437673a7b</sys_scope>
-        <sys_update_name>sys_ws_definition_102bff353bb03200d41a456993efc4c8</sys_update_name>
+        <sys_update_name>sys_ws_definition_f894066e3b703200d41a456993efc477</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2017-02-08 17:36:30</sys_updated_on>
+        <sys_updated_on>2017-02-10 16:53:59</sys_updated_on>
     </sys_ws_definition>
 </record_update>

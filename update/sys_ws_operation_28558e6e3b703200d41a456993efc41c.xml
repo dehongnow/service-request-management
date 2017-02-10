@@ -10,11 +10,11 @@
         <name>Work Assignment</name>
         <operation_script><![CDATA[(function process(/*RESTAPIRequest*/ request, /*RESTAPIResponse*/ response) {
 	
-	var workerRequest = request.body.data;
+	var requestedWorkerAssignment = request.body.data;
 	
-	var wom = new WorkOrderManagement();
+	var orderService = new WorkOrderService();
 	try {
-		var assignment = wom.assignAvailable(workerRequest);		
+		var assignment = orderService.assignAvailable(requestedWorkerAssignment);		
 		var responseBody = {};
 		if(gs.nil(assignment)) {
 			responseBody.assigned = false;
@@ -43,7 +43,7 @@
         <sys_created_on>2017-02-10 16:57:09</sys_created_on>
         <sys_customer_update>false</sys_customer_update>
         <sys_id>28558e6e3b703200d41a456993efc41c</sys_id>
-        <sys_mod_count>1</sys_mod_count>
+        <sys_mod_count>3</sys_mod_count>
         <sys_name>Work Assignment</sys_name>
         <sys_package display_value="Service Request Management" source="sn_service_request">c8a02be10b303200d109061437673a7b</sys_package>
         <sys_policy/>
@@ -51,7 +51,7 @@
         <sys_scope display_value="Service Request Management">c8a02be10b303200d109061437673a7b</sys_scope>
         <sys_update_name>sys_ws_operation_28558e6e3b703200d41a456993efc41c</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2017-02-10 16:57:28</sys_updated_on>
+        <sys_updated_on>2017-02-10 21:41:29</sys_updated_on>
         <web_service_definition display_value="Work Assignment">7a350e6e3b703200d41a456993efc455</web_service_definition>
         <web_service_version/>
     </sys_ws_operation>

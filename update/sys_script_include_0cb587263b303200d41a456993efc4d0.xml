@@ -3,27 +3,27 @@
     <sys_script_include action="INSERT_OR_UPDATE">
         <access>package_private</access>
         <active>true</active>
-        <api_name>sn_service_request.WorkOrderManagement</api_name>
+        <api_name>sn_service_request.WorkOrderService</api_name>
         <client_callable>false</client_callable>
         <description/>
-        <name>WorkOrderManagement</name>
-        <script><![CDATA[var WorkOrderManagement = Class.create();
-WorkOrderManagement.prototype = {
+        <name>WorkOrderService</name>
+        <script><![CDATA[var WorkOrderService = Class.create();
+WorkOrderService.prototype = {
 	initialize: function() {
-		this.capabilityHelper = new CapabilityHelper();
-		this.workOrderHistoryHelper = new WorkOrderHistoryHelper();
+		this.capabilityService = new CapabilityService();
+		this.workOrderHistoryService = new WorkOrderHistoryService();
 	},
 
 	assignAvailable: function(requestingWorker) {
-		checkRequestingWorker(requestingWorker, this.capabilityHelper);
-		var worker = registerWorker(requestingWorker, this.capabilityHelper);
-		var workOrder = matchAvailableWorkOrder(requestingWorker.capabilities, this.capabilityHelper);
+		checkRequestingWorker(requestingWorker, this.capabilityService);
+		var worker = registerWorker(requestingWorker, this.capabilityService);
+		var workOrder = matchAvailableWorkOrder(requestingWorker.capabilities, this.capabilityService);
 		if (!gs.nil(workOrder)) {
 			if (gs.nil(assignWork(workOrder, worker))) {
 				return;
 			}
 
-			this.workOrderHistoryHelper.addEntry(workOrder.getUniqueValue(), "assigned");
+			this.workOrderHistoryService.addEntry(workOrder.getUniqueValue(), "assigned");
 
 			// Form a reply
 			var assignmentReply = {};
@@ -45,7 +45,7 @@ WorkOrderManagement.prototype = {
 	},
 
 	schedule: function(workOrderRequest) {
-		checkWorkOrderRequest(workOrderRequest, this.capabilityHelper);
+		checkWorkOrderRequest(workOrderRequest, this.capabilityService);
 
 		var scheduledTime = deriveScheduledTime(workOrderRequest);
 		var priority = derivePriority(workOrderRequest);
@@ -54,11 +54,11 @@ WorkOrderManagement.prototype = {
 
 		var glideCapabilities = [];
 
-		var capability = this.capabilityHelper.createFromRequest(workOrderRequest.capability);
-		glideCapabilities.push(this.capabilityHelper.loadGlideRecord(capability, true));
-		var capabilities = this.capabilityHelper.createFromGlideRecords(glideCapabilities);
-		var capabilitiesStringified = this.capabilityHelper.buildDisplayString(capabilities);
-		var capabilitiesHash = this.capabilityHelper.stringToHashCode(capabilitiesStringified);
+		var capability = this.capabilityService.createFromRequest(workOrderRequest.capability);
+		glideCapabilities.push(this.capabilityService.loadGlideRecord(capability, true));
+		var capabilities = this.capabilityService.createFromGlideRecords(glideCapabilities);
+		var capabilitiesStringified = this.capabilityService.buildDisplayString(capabilities);
+		var capabilitiesHash = this.capabilityService.stringToHashCode(capabilitiesStringified);
 
 		var workOrder = new GlideRecord("sn_service_request_work_order");
 		workOrder.initialize();
@@ -76,7 +76,7 @@ WorkOrderManagement.prototype = {
 		workOrder.requested_by = gs.getUserName();
 		var sys_id = workOrder.insert();
 
-		this.workOrderHistoryHelper.addEntry(sys_id, initialState);
+		this.workOrderHistoryService.addEntry(sys_id, initialState);
 
 		// Form a reply
 		var workOrderReply = {};
@@ -92,7 +92,7 @@ WorkOrderManagement.prototype = {
 		// todo: implement
 	},
 
-	type: 'WorkOrderManagement'
+	type: 'WorkOrderService'
 };
 
 function deriveScheduledTime(workOrderRequest) {
@@ -105,10 +105,10 @@ function derivePriority(workOrderRequest) {
 	return 100;
 }
 
-function loadCapabilityGlideRecord(requestedCapability, insertIfMissing, capabilityHelper) {
-	capabilityHelper.checkRequestedCapability(requestedCapability);
-	var capability = capabilityHelper.createFromRequest(requestedCapability);
-	return capabilityHelper.loadGlideRecord(capability, insertIfMissing);
+function loadCapabilityGlideRecord(requestedCapability, insertIfMissing, capabilityService) {
+	capabilityService.checkRequestedCapability(requestedCapability);
+	var capability = capabilityService.createFromRequest(requestedCapability);
+	return capabilityService.loadGlideRecord(capability, insertIfMissing);
 }
 
 function assignWork(workOrder, worker) {
@@ -141,13 +141,13 @@ function assignWork(workOrder, worker) {
 	return assignment;
 }
 
-function matchAvailableWorkOrder(requestedCapabilities, capabilityHelper) {
+function matchAvailableWorkOrder(requestedCapabilities, capabilityService) {
 	var requestedCapabilityHashes = [];
 	var i;
 	for (i = 0; i < requestedCapabilities.length; i++) {
 		var glideCapabilities = [];
-		glideCapabilities.push(capabilityHelper.createFromGlideRecord(loadCapabilityGlideRecord(requestedCapabilities[i], true, capabilityHelper)));
-		requestedCapabilityHashes.push(capabilityHelper.stringToHashCode(capabilityHelper.buildDisplayString(glideCapabilities)));
+		glideCapabilities.push(capabilityService.createFromGlideRecord(loadCapabilityGlideRecord(requestedCapabilities[i], true, capabilityService)));
+		requestedCapabilityHashes.push(capabilityService.stringToHashCode(capabilityService.buildDisplayString(glideCapabilities)));
 	}
 	if (requestedCapabilityHashes.length == 0) {
 		return;
@@ -164,10 +164,10 @@ function matchAvailableWorkOrder(requestedCapabilities, capabilityHelper) {
 	}
 }
 
-function registerWorker(requestingWorker, capabilityHelper) {
+function registerWorker(requestingWorker, capabilityService) {
 	var workerTableName = "sn_service_request_worker";
-	var capabilities = capabilityHelper.createFromRequestedCapabilities(requestingWorker.capabilities);
-	var requestedCapabilitiesHash = capabilityHelper.stringToHashCode(capabilityHelper.buildDisplayString(capabilities));
+	var capabilities = capabilityService.createFromRequestedCapabilities(requestingWorker.capabilities);
+	var requestedCapabilitiesHash = capabilityService.stringToHashCode(capabilityService.buildDisplayString(capabilities));
 
 	var saveCapabilities = false;
 
@@ -205,7 +205,7 @@ function registerWorker(requestingWorker, capabilityHelper) {
 			var workerCapability = new GlideRecord('sn_service_request_worker_capability');
 			workerCapability.initialize();
 			workerCapability.worker = worker.getUniqueValue();
-			workerCapability.capability = capabilityHelper.loadGlideRecord(capabilities[i], true).getUniqueValue();
+			workerCapability.capability = capabilityService.loadGlideRecord(capabilities[i], true).getUniqueValue();
 			workerCapability.insert();
 		}
 	}
@@ -213,7 +213,7 @@ function registerWorker(requestingWorker, capabilityHelper) {
 	return worker;
 }
 
-function checkWorkOrderRequest(workOrderRequest, capabilityHelper) {
+function checkWorkOrderRequest(workOrderRequest, capabilityService) {
 	// Parameter validation
 	if (gs.nil(workOrderRequest) || gs.nil(workOrderRequest.token) ||
 		gs.nil(workOrderRequest.instance_name) || gs.nil(workOrderRequest.instance_url) ||
@@ -224,7 +224,7 @@ function checkWorkOrderRequest(workOrderRequest, capabilityHelper) {
 		"instance_url, instance_id, node_id, node_url, capability";
 	}
 
-	var error = capabilityHelper.checkRequestedCapability(workOrderRequest.capability);
+	var error = capabilityService.checkRequestedCapability(workOrderRequest.capability);
 	if (!gs.nil(error)) {
 		throw error;
 	}
@@ -241,7 +241,7 @@ function checkWorkOrderRequest(workOrderRequest, capabilityHelper) {
 	}
 }
 
-function checkRequestingWorker(requestingWorker, capabilityHelper) {
+function checkRequestingWorker(requestingWorker, capabilityService) {
 	if (gs.nil(requestingWorker) || gs.nil(requestingWorker.name) || gs.nil(requestingWorker.capabilities) ||
 		gs.nil(requestingWorker.capabilities.length) || 0 == requestingWorker.capabilities.length
 	) {
@@ -250,23 +250,23 @@ function checkRequestingWorker(requestingWorker, capabilityHelper) {
 
 	var i;
 	for (i = 0; i < requestingWorker.capabilities.length; i++) {
-		capabilityHelper.checkRequestedCapability(requestingWorker.capabilities[i]);
+		capabilityService.checkRequestedCapability(requestingWorker.capabilities[i]);
 	}
 }
 ]]></script>
         <sys_class_name>sys_script_include</sys_class_name>
         <sys_created_by>admin</sys_created_by>
-        <sys_created_on>2017-02-10 16:18:18</sys_created_on>
+        <sys_created_on>2017-02-10 21:38:26</sys_created_on>
         <sys_customer_update>false</sys_customer_update>
-        <sys_id>a86c75ea3b703200d41a456993efc437</sys_id>
-        <sys_mod_count>22</sys_mod_count>
-        <sys_name>WorkOrderManagement</sys_name>
+        <sys_id>0cb587263b303200d41a456993efc4d0</sys_id>
+        <sys_mod_count>1</sys_mod_count>
+        <sys_name>WorkOrderService</sys_name>
         <sys_package display_value="Service Request Management" source="sn_service_request">c8a02be10b303200d109061437673a7b</sys_package>
         <sys_policy>read</sys_policy>
         <sys_replace_on_upgrade>false</sys_replace_on_upgrade>
         <sys_scope display_value="Service Request Management">c8a02be10b303200d109061437673a7b</sys_scope>
-        <sys_update_name>sys_script_include_a86c75ea3b703200d41a456993efc437</sys_update_name>
+        <sys_update_name>sys_script_include_0cb587263b303200d41a456993efc4d0</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2017-02-10 21:28:19</sys_updated_on>
+        <sys_updated_on>2017-02-10 21:39:04</sys_updated_on>
     </sys_script_include>
 </record_update>

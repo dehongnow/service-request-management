@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<database>
+    <element label="Work Order" max_length="40" name="sn_service_request_work_order" type="collection">
+        <element label="Capability" mandatory="true" max_length="32" name="capability" reference="sn_service_request_capability" type="reference"/>
+        <element label="Capability Hash" mandatory="true" max_length="40" name="capability_hash" text_index="true" type="integer"/>
+        <element label="Instance ID" mandatory="true" max_length="255" name="instance_id" type="string"/>
+        <element label="Instance Name" mandatory="true" max_length="255" name="instance_name" type="string"/>
+        <element label="Instance URL" mandatory="true" max_length="255" name="instance_url" type="string"/>
+        <element default="30" label="Max Drift" max_length="40" name="max_drift" type="integer"/>
+        <element label="Node ID" mandatory="true" max_length="255" name="node_id" type="string"/>
+        <element label="Node URL" mandatory="true" max_length="255" name="node_url" type="string"/>
+        <element default="100" label="Priority" max_length="40" name="priority" type="integer"/>
+        <element label="Scheduled Time" mandatory="true" max_length="40" name="scheduled_time" type="glide_date_time"/>
+        <element choice="1" default="created" label="State" mandatory="true" max_length="40" name="state" type="choice">
+            <choice/>
+        </element>
+        <element label="Token" mandatory="true" max_length="255" name="token" text_index="true" type="string"/>
+        <index name="index">
+            <element name="capability"/>
+        </index>
+    </element>
+</database>

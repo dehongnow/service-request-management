@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <database>
     <element label="Assignment" max_length="40" name="sn_service_request_assignment" type="collection">
-        <element label="Service Request" max_length="32" name="service_request" reference="sn_service_request_service_request" type="reference"/>
-        <element label="Worker" max_length="32" name="worker" reference="sn_service_request_worker" type="reference"/>
+        <element label="Worker" mandatory="true" max_length="32" name="worker" reference="sn_service_request_worker" type="reference"/>
+        <element label="Work Order" mandatory="true" max_length="32" name="work_order" reference="sn_service_request_work_order" type="reference"/>
         <index name="index">
-            <element name="service_request"/>
+            <element name="worker"/>
         </index>
         <index name="index2">
-            <element name="worker"/>
+            <element name="work_order"/>
         </index>
     </element>
 </database>

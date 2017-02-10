@@ -12,9 +12,9 @@
 	
 	var workerRequest = request.body.data;
 	
-	var requestMgr = new ServiceRequestManagement();
+	var wom = new WorkOrderManagement();
 	try {
-		var assignment = requestMgr.assignAvailableWork(workerRequest);		
+		var assignment = wom.assignAvailable(workerRequest);		
 		var responseBody = {};
 		if(gs.nil(assignment)) {
 			responseBody.assigned = false;
@@ -23,7 +23,6 @@
 			responseBody.assignment = assignment;
 		}
 		response.setBody(responseBody);
-		return assignment;
 	} catch(error) {
 		gs.info("got an error");
 		var msg = "Unable to assign worker. Error is: " + error;
@@ -44,7 +43,7 @@
         <sys_created_on>2017-02-08 17:38:22</sys_created_on>
         <sys_customer_update>false</sys_customer_update>
         <sys_id>643b33753bb03200d41a456993efc4ad</sys_id>
-        <sys_mod_count>16</sys_mod_count>
+        <sys_mod_count>17</sys_mod_count>
         <sys_name>Worker Request</sys_name>
         <sys_package display_value="Service Request Management" source="sn_service_request">c8a02be10b303200d109061437673a7b</sys_package>
         <sys_policy/>
@@ -52,7 +51,7 @@
         <sys_scope display_value="Service Request Management">c8a02be10b303200d109061437673a7b</sys_scope>
         <sys_update_name>sys_ws_operation_643b33753bb03200d41a456993efc4ad</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2017-02-09 18:59:49</sys_updated_on>
+        <sys_updated_on>2017-02-10 16:23:47</sys_updated_on>
         <web_service_definition display_value="Worker Request">102bff353bb03200d41a456993efc4c8</web_service_definition>
         <web_service_version/>
     </sys_ws_operation>

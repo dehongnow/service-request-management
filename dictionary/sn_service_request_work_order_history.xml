@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<database>
+    <element label="Work Order History" max_length="40" name="sn_service_request_work_order_history" type="collection">
+        <element label="Error" max_length="255" name="error" type="string"/>
+        <element choice="1" default="created" label="State" mandatory="true" max_length="40" name="state" text_index="true" type="choice">
+            <choice/>
+        </element>
+        <element label="Work Order" mandatory="true" max_length="32" name="work_order" reference="sn_service_request_work_order" type="reference"/>
+        <index name="index">
+            <element name="work_order"/>
+        </index>
+    </element>
+</database>

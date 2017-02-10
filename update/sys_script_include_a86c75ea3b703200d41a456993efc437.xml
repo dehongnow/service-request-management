@@ -1,0 +1,336 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>package_private</access>
+        <active>true</active>
+        <api_name>sn_service_request.WorkOrderManagement</api_name>
+        <client_callable>false</client_callable>
+        <description/>
+        <name>WorkOrderManagement</name>
+        <script><![CDATA[var WorkOrderManagement = Class.create();
+WorkOrderManagement.prototype = {
+	initialize: function() {
+	},
+
+	assignAvailable: function(requestingWorker) {
+		checkRequestingWorker(requestingWorker);
+		var worker = registerWorker(requestingWorker);
+		var workOrder = matchAvailableWorkOrder(requestingWorker.capabilities);
+		return !gs.nil(workOrder) ? assignWork(workOrder, worker) : null;
+	},
+
+	schedule: function(workOrderRequest) {
+		checkWorkOrderRequest(workOrderRequest);
+
+		var scheduledTime = deriveScheduledTime(workOrderRequest);
+		var priority = derivePriority(workOrderRequest);
+
+		var initialState = 'created';
+
+		var capabilities = [];
+		capabilities.push(loadCapability(workOrderRequest.capability, true));
+		var capabilitiesHash = stringToHashCode(stringifyCapablities(capabilities));
+
+		var workOrder = new GlideRecord("sn_service_request_work_order");
+		workOrder.initialize();
+		workOrder.token = workOrderRequest.token;
+		workOrder.state = initialState;
+		workOrder.capability = capabilities[0].getUniqueValue();
+		workOrder.capability_hash = capabilitiesHash;
+		workOrder.instance_name = workOrderRequest.instance_name;
+		workOrder.instance_id = workOrderRequest.instance_id;
+		workOrder.instance_url = workOrderRequest.instance_url;
+		workOrder.node_id = workOrderRequest.node_id;
+		workOrder.node_url = workOrderRequest.node_url;
+		workOrder.scheduled_time = scheduledTime;
+		workOrder.priority = priority;
+		workOrder.requested_by = gs.getUserName();
+		var sys_id = workOrder.insert();
+
+		trackWorkOrderState(sys_id, initialState);
+
+		// Form a reply
+		var workOrderReply = {};
+		workOrderReply.token = workOrderRequest.token;
+		workOrderReply.scheduledTime = scheduledTime.getDisplayValue();
+		workOrderReply.priority = priority;
+		workOrderReply.state = initialState;
+		workOrderReply.capability = workOrderRequest.capability;
+		return workOrderReply;
+	},
+
+	cancel: function(workOrderId) {
+		// todo: implement
+	},
+
+	type: 'WorkOrderManagement'
+};
+
+function deriveScheduledTime(workOrderRequest) {
+	// todo: in the future we may have more logic tied to this...
+	return new GlideDateTime();
+}
+
+function derivePriority(workOrderRequest) {
+	// todo: in the future we may have more logic tied to this...
+	return 100;
+}
+
+function loadCapability(capabilityRequest, insertIfMissing) {
+	var capabilityTableName = "sn_service_request_capability";
+
+	var existingCapability = new GlideRecord(capabilityTableName);
+	existingCapability.initialize();
+	existingCapability.addQuery("type", capabilityRequest.type);
+	existingCapability.addQuery("name", capabilityRequest.name);
+	existingCapability.addQuery("version", capabilityRequest.version);
+	existingCapability.query();
+	if (existingCapability.next()) {
+		return existingCapability;
+	} else if (!gs.nil(insertIfMissing) && true == insertIfMissing) {
+		var newCapability = new GlideRecord(capabilityTableName);
+		newCapability.initialize();
+		newCapability.type = capabilityRequest.type;
+		newCapability.name = capabilityRequest.name;
+		newCapability.version = capabilityRequest.version;
+		newCapability.insert();
+		return newCapability;
+	}
+}
+
+function assignWork(workOrder, worker) {
+	// A given work order (token) can only be assigned once. No re-assignment.
+
+	// Unfortunately, scoped apps don't have access to the GlideMutex library (sigh...).  Since we cannot lock
+	// the work_order table we run the chance of an assignment race condition (e.g. two independent
+	// worker id threads trying to assign themselves to the same work order). To mitigate
+	// we try to detect if setting the "state" to "assigned" represents no change in lifecycle state (by looking at
+	// the "sys_mod_count" before / after).  If the "sys_mod_count" didn't change then we've detected a race
+	// condition, log it and leave.
+
+	var assignedState = "assigned";
+
+	var modCountBefore = workOrder.getValue("sys_mod_count");
+	workOrder.setValue("state", assignedState);
+	workOrder.update();
+	var modCountAfter = workOrder.getValue("sys_mod_count");
+	if (modCountAfter == modCountBefore) {
+		gs.info("Work Order " + workOrder.getValue("token") + " has already been assigned. " +
+			"Re-assignment is NOT permitted.");
+		return;
+	}
+
+	// Not a re-assignment race condition :-) so complete this assignment.
+	var assignment = new GlideRecord("sn_service_request_assignment");
+	assignment.initialize();
+	assignment.work_order = workOrder.getUniqueValue();
+	assignment.worker = worker.getUniqueValue();
+	assignment.insert();
+
+	trackWorkOrderState(workOrder.getUniqueValue(), assignedState);
+
+	// Form a reply
+	var assignmentReply = {};
+	assignmentReply.coordinates = {};
+	assignmentReply.coordinates.token = workOrder.getValue("token");
+	assignmentReply.coordinates.instance_id = workOrder.getValue("instance_id");
+	assignmentReply.coordinates.instance_name = workOrder.getValue("instance_name");
+	assignmentReply.coordinates.instance_url = workOrder.getValue("instance_url");
+	assignmentReply.coordinates.node_id = workOrder.getValue("node_id");
+	assignmentReply.coordinates.node_url = workOrder.getValue("node_url");
+
+	var workCapability = workOrder.capability.getRefRecord();
+	assignmentReply.capability = {};
+	assignmentReply.capability.type = workCapability.getValue("type");
+	assignmentReply.capability.name = workCapability.getValue("name");
+	assignmentReply.capability.version = workCapability.getValue("version");
+	return assignmentReply;
+}
+
+function matchAvailableWorkOrder(requestedCapabilities) {
+	var requestedCapabilityHashes = [];
+	var i;
+	for (i = 0; i < requestedCapabilities.length; i++) {
+		var capabilities = [];
+		capabilities.push(loadCapability(requestedCapabilities[i], true));
+		requestedCapabilityHashes.push(stringToHashCode(stringifyCapablities(capabilities)));
+	}
+	if (requestedCapabilityHashes.length == 0) {
+		return;
+	}
+
+	var workOrder = new GlideRecord("sn_service_request_work_order");
+	workOrder.addQuery("state", "created");
+	workOrder.addQuery("scheduled_time", "<=", new GlideDateTime());
+	workOrder.addQuery("capability_hash", "IN", requestedCapabilityHashes.join());
+	workOrder.orderBy("scheduled_time"); // todo: also by priority...
+	workOrder.query();
+	if (workOrder.next()) {
+		return workOrder;
+	}
+}
+
+function registerWorker(requestingWorker) {
+	var workerTableName = "sn_service_request_worker";
+	var requestedCapabilitiesHash = stringToHashCode(stringifyCapablities(requestingWorker.capabilities));
+	var saveCapabilities = false;
+	var worker;
+
+	var existingWorker = new GlideRecord(workerTableName);
+	existingWorker.initialize();
+	existingWorker.addQuery("name", requestingWorker.name);
+	existingWorker.query();
+	if (existingWorker.next()) {
+		worker = existingWorker;
+		if (existingWorker.getValue("capabilities_hash") != requestedCapabilitiesHash) {
+			existingWorker.setValue("capabilities_hash", requestedCapabilitiesHash);
+			existingWorker.update();
+			saveCapabilities = true;
+		}
+	} else {
+		var newWorker = new GlideRecord(workerTableName);
+		newWorker.initialize();
+		newWorker.name = requestingWorker.name;
+		newWorker.capabilities_hash = requestedCapabilitiesHash;
+		newWorker.insert();
+		worker = newWorker;
+		saveCapabilities = true;
+	}
+
+	if (saveCapabilities) {
+		var resetWorkerCapabilities = new GlideRecord('sn_service_request_worker_capability');
+		resetWorkerCapabilities.initialize();
+		resetWorkerCapabilities.addQuery("worker", worker.getUniqueValue());
+		resetWorkerCapabilities.deleteMultiple();
+
+		var i;
+		for (i = 0; i < requestingWorker.capabilities.length; i++) {
+			var workerCapability = new GlideRecord('sn_service_request_worker_capability');
+			workerCapability.initialize();
+			workerCapability.worker = worker.getUniqueValue();
+			workerCapability.capability = loadCapability(requestingWorker.capabilities[i], true).getUniqueValue();
+			workerCapability.insert();
+		}
+	}
+
+	return worker;
+}
+
+function trackWorkOrderState(workOrderSysId, state) {
+	var workHistoryEntry = new GlideRecord('sn_service_request_work_order_history');
+	workHistoryEntry.initialize();
+	workHistoryEntry.work_order = workOrderSysId;
+	workHistoryEntry.state = state;
+	workHistoryEntry.insert();
+
+	// todo: need to figure out a cascade-delete strategy
+}
+
+function checkWorkOrderRequest(workOrderRequest) {
+	// Parameter validation
+	if (gs.nil(workOrderRequest) || gs.nil(workOrderRequest.token) ||
+		gs.nil(workOrderRequest.instance_name) || gs.nil(workOrderRequest.instance_url) ||
+		gs.nil(workOrderRequest.instance_id) || gs.nil(workOrderRequest.node_id) ||
+		gs.nil(workOrderRequest.node_url)
+	) {
+		throw "workOrderRequest parameter is malformed. It requires the following fields: token, instance_name, " +
+		"instance_url, instance_id, node_id, node_url, capability";
+	}
+
+	var error = checkCapability(workOrderRequest.capability);
+	if (!gs.nil(error)) {
+		throw error;
+	}
+
+	// Make sure the token does not already exist.
+	var count = new GlideAggregate("sn_service_request_work_order");
+	count.addQuery("token", workOrderRequest.token);
+	count.addAggregate("COUNT");
+	count.query();
+	if (count.next()) {
+		if (count.getAggregate("COUNT") > 0) {
+			throw "Duplicate work order token " + workOrderRequest.token + ".";
+		}
+	}
+}
+
+function checkRequestingWorker(requestingWorker) {
+	if (gs.nil(requestingWorker) || gs.nil(requestingWorker.name) || gs.nil(requestingWorker.capabilities) ||
+		gs.nil(requestingWorker.capabilities.length) || 0 == requestingWorker.capabilities.length
+	) {
+		throw "requestingWorker is malformed. It requires the following fields: name, capabilities";
+	}
+
+	var i;
+	for (i = 0; i < requestingWorker.capabilities.length; i++) {
+		var error = checkCapability(requestingWorker.capabilities[i]);
+		if (!gs.nil(error)) {
+			throw error;
+		}
+	}
+}
+
+function checkCapability(requestedCapability) {
+	if (gs.nil(requestedCapability) || gs.nil(requestedCapability.type) || gs.nil(requestedCapability.name) || gs.nil(requestedCapability.version)) {
+		throw "capability is incomplete. It requires the following fields: type, name, version";
+	}
+}
+
+function stringifyCapablities(requestedCapabablities) {
+	if (gs.nil(requestedCapabablities) || gs.nil(requestedCapabablities.length) == null || requestedCapabablities.length == 0) {
+		return;
+	}
+
+	var i, k;
+	var keys = [];
+	var capabilitiesMap = [requestedCapabablities.length];
+
+	for (i = 0; i < requestedCapabablities.length; i++) {
+		var capabablity = requestedCapabablities[i];
+		keys.push(capabablity.name);
+		capabilitiesMap[capabablity.name] = capabablity;
+	}
+
+	keys.sort();
+	var len = keys.length;
+	var str = "";
+
+	for (i = 0; i < len; i++) {
+		if (i > 0) {
+			str += "; ";
+		}
+		k = keys[i];
+		var capability = capabilitiesMap[k];
+		str += "[" + i + "] = type:" + capability.type + ", name:" + capability.name + ", version:" + capability.version;
+	}
+
+	return str;
+}
+
+function stringToHashCode(str){
+	var hash = 0, i;
+	if (str.length == 0) return hash;
+	for (i = 0; i < str.length; i++) {
+		var ch = str.charCodeAt(i);
+		hash = ((hash<<5)-hash)+ch;
+		hash = hash & hash;
+	}
+	return hash;
+}
+]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2017-02-10 16:18:18</sys_created_on>
+        <sys_customer_update>false</sys_customer_update>
+        <sys_id>a86c75ea3b703200d41a456993efc437</sys_id>
+        <sys_mod_count>4</sys_mod_count>
+        <sys_name>WorkOrderManagement</sys_name>
+        <sys_package display_value="Service Request Management" source="sn_service_request">c8a02be10b303200d109061437673a7b</sys_package>
+        <sys_policy>read</sys_policy>
+        <sys_replace_on_upgrade>false</sys_replace_on_upgrade>
+        <sys_scope display_value="Service Request Management">c8a02be10b303200d109061437673a7b</sys_scope>
+        <sys_update_name>sys_script_include_a86c75ea3b703200d41a456993efc437</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-02-10 16:41:04</sys_updated_on>
+    </sys_script_include>
+</record_update>

@@ -6,43 +6,40 @@
         <consumes_customized>false</consumes_customized>
         <default_operation_uri/>
         <enforce_acl/>
-        <http_method>POST</http_method>
+        <http_method>DELETE</http_method>
         <name>Work Order</name>
         <operation_script><![CDATA[(function process(/*RESTAPIRequest*/ request, /*RESTAPIResponse*/ response) {
-
-	var requestedWorkOrder = request.body.data;
 	
-	var orderService = new WorkOrderService();
 	try {
-		return orderService.schedule(requestedWorkOrder);
+		return new WorkOrderService().cancel(request.pathParams.token);
 	} catch(error) {
-		var msg = "Unable to schedule the work order. Error is: " + error;
-		return new sn_ws_err.BadRequestError(msg, requestedWorkOrder);
+		var msg = "Unable to delete the work order. Error is: " + error;
+		return new sn_ws_err.BadRequestError(msg, path.token);
 	}	
 	
 })(request, response);]]></operation_script>
-        <operation_uri>/api/sn_service_request/work_order</operation_uri>
+        <operation_uri>/api/sn_service_request/work_order/{token}</operation_uri>
         <produces>application/json,application/xml,text/xml</produces>
         <produces_customized>false</produces_customized>
-        <relative_path>/</relative_path>
+        <relative_path>/{token}</relative_path>
         <request_example/>
         <requires_acl_authorization>false</requires_acl_authorization>
         <requires_authentication>true</requires_authentication>
         <short_description/>
         <sys_class_name>sys_ws_operation</sys_class_name>
         <sys_created_by>admin</sys_created_by>
-        <sys_created_on>2017-02-10 16:54:16</sys_created_on>
+        <sys_created_on>2017-02-11 00:06:48</sys_created_on>
         <sys_customer_update>false</sys_customer_update>
-        <sys_id>aca48a6e3b703200d41a456993efc4db</sys_id>
-        <sys_mod_count>3</sys_mod_count>
+        <sys_id>cca7af2a3b303200d41a456993efc40d</sys_id>
+        <sys_mod_count>6</sys_mod_count>
         <sys_name>Work Order</sys_name>
         <sys_package display_value="Service Request Management" source="sn_service_request">c8a02be10b303200d109061437673a7b</sys_package>
         <sys_policy/>
         <sys_replace_on_upgrade>false</sys_replace_on_upgrade>
         <sys_scope display_value="Service Request Management">c8a02be10b303200d109061437673a7b</sys_scope>
-        <sys_update_name>sys_ws_operation_aca48a6e3b703200d41a456993efc4db</sys_update_name>
+        <sys_update_name>sys_ws_operation_cca7af2a3b303200d41a456993efc40d</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2017-02-11 00:22:18</sys_updated_on>
+        <sys_updated_on>2017-02-11 00:32:17</sys_updated_on>
         <web_service_definition display_value="Work Order">f894066e3b703200d41a456993efc477</web_service_definition>
         <web_service_version/>
     </sys_ws_operation>

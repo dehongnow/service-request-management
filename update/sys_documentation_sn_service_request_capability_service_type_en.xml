@@ -1,28 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <record_update>
-    <sys_documentation element="kind" label="Kind" language="en" table="sn_service_request_capability">
+    <sys_documentation element="service_type" label="Service Type" language="en" table="sn_service_request_capability">
         <sys_documentation action="INSERT_OR_UPDATE">
-            <element>kind</element>
+            <element>service_type</element>
             <help/>
             <hint/>
-            <label>Kind</label>
+            <label>Service Type</label>
             <language>en</language>
             <name>sn_service_request_capability</name>
-            <plural>Kinds</plural>
+            <plural>Service Types</plural>
             <sys_class_name>sys_documentation</sys_class_name>
             <sys_created_by>admin</sys_created_by>
-            <sys_created_on>2017-02-10 19:28:52</sys_created_on>
+            <sys_created_on>2017-02-13 19:25:40</sys_created_on>
             <sys_customer_update>false</sys_customer_update>
-            <sys_id>9c18aee63b303200d41a456993efc486</sys_id>
+            <sys_id>d2140e2f3b303200d41a456993efc4a1</sys_id>
             <sys_mod_count>0</sys_mod_count>
-            <sys_name>Kind</sys_name>
+            <sys_name>Service Type</sys_name>
             <sys_package display_value="Service Request Management" source="sn_service_request">c8a02be10b303200d109061437673a7b</sys_package>
             <sys_policy/>
             <sys_replace_on_upgrade>false</sys_replace_on_upgrade>
             <sys_scope display_value="Service Request Management">c8a02be10b303200d109061437673a7b</sys_scope>
-            <sys_update_name>sys_documentation_sn_service_request_capability_kind_en</sys_update_name>
+            <sys_update_name>sys_documentation_sn_service_request_capability_service_type_en</sys_update_name>
             <sys_updated_by>admin</sys_updated_by>
-            <sys_updated_on>2017-02-10 19:28:52</sys_updated_on>
+            <sys_updated_on>2017-02-13 19:25:40</sys_updated_on>
             <url/>
             <url_target/>
         </sys_documentation>

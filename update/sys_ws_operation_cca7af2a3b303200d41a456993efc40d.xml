@@ -7,7 +7,7 @@
         <default_operation_uri/>
         <enforce_acl/>
         <http_method>DELETE</http_method>
-        <name>Work Order</name>
+        <name>Cancel</name>
         <operation_script><![CDATA[(function process(/*RESTAPIRequest*/ request, /*RESTAPIResponse*/ response) {
 	
 	try {
@@ -31,15 +31,15 @@
         <sys_created_on>2017-02-11 00:06:48</sys_created_on>
         <sys_customer_update>false</sys_customer_update>
         <sys_id>cca7af2a3b303200d41a456993efc40d</sys_id>
-        <sys_mod_count>6</sys_mod_count>
-        <sys_name>Work Order</sys_name>
+        <sys_mod_count>9</sys_mod_count>
+        <sys_name>Cancel</sys_name>
         <sys_package display_value="Service Request Management" source="sn_service_request">c8a02be10b303200d109061437673a7b</sys_package>
         <sys_policy/>
         <sys_replace_on_upgrade>false</sys_replace_on_upgrade>
         <sys_scope display_value="Service Request Management">c8a02be10b303200d109061437673a7b</sys_scope>
         <sys_update_name>sys_ws_operation_cca7af2a3b303200d41a456993efc40d</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2017-02-11 00:32:17</sys_updated_on>
+        <sys_updated_on>2017-02-13 16:01:04</sys_updated_on>
         <web_service_definition display_value="Work Order">f894066e3b703200d41a456993efc477</web_service_definition>
         <web_service_version/>
     </sys_ws_operation>

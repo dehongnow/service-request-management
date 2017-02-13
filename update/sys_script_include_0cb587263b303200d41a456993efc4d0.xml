@@ -11,7 +11,6 @@
 WorkOrderService.prototype = {
 	initialize: function() {
 		this.capabilityService = new CapabilityService();
-		this.workOrderHistoryService = new WorkOrderHistoryService();
 	},
 
 	assignAvailable: function(requestingWorker) {
@@ -23,28 +22,22 @@ WorkOrderService.prototype = {
 				return;
 			}
 
-			this.workOrderHistoryService.addEntry(workOrder.getUniqueValue(), "assigned");
-
 			// Form a reply
 			var assignmentReply = {};
 			assignmentReply.coordinates = {};
 			assignmentReply.coordinates.token = workOrder.getValue("token");
-			assignmentReply.coordinates.instance_id = workOrder.getValue("instance_id");
-			assignmentReply.coordinates.instance_name = workOrder.getValue("instance_name");
-			assignmentReply.coordinates.instance_url = workOrder.getValue("instance_url");
-			assignmentReply.coordinates.node_id = workOrder.getValue("node_id");
-			assignmentReply.coordinates.node_url = workOrder.getValue("node_url");
+			assignmentReply.coordinates.callback_instance_url = workOrder.getValue("callback_instance_url");
 
 			var capability = workOrder.capability.getRefRecord();
-			assignmentReply.capability = {};
-			assignmentReply.capability.kind = capability.getValue("kind");
-			assignmentReply.capability.name = capability.getValue("name");
-			assignmentReply.capability.version = capability.getValue("version");
+			assignmentReply.capability_required = {};
+			assignmentReply.capability_required.service_type = capability.getValue("service_type");
+			assignmentReply.capability_required.name = capability.getValue("name");
+			assignmentReply.capability_required.version = capability.getValue("version");
 			return assignmentReply;
 		}
 	},
 
-	schedule: function(workOrderRequest) {
+	create: function(workOrderRequest) {
 		checkWorkOrderRequest(workOrderRequest, this.capabilityService);
 
 		var scheduledTime = deriveScheduledTime(workOrderRequest);
@@ -54,7 +47,7 @@ WorkOrderService.prototype = {
 
 		var glideCapabilities = [];
 
-		var capability = this.capabilityService.createFromRequest(workOrderRequest.capability);
+		var capability = this.capabilityService.createFromRequest(workOrderRequest.capability_required);
 		glideCapabilities.push(this.capabilityService.loadGlideRecord(capability, true));
 		var capabilities = this.capabilityService.createFromGlideRecords(glideCapabilities);
 		var capabilitiesStringified = this.capabilityService.buildDisplayString(capabilities);
@@ -66,25 +59,21 @@ WorkOrderService.prototype = {
 		workOrder.state = initialState;
 		workOrder.capability = glideCapabilities[0].getUniqueValue();
 		workOrder.capability_hash = capabilitiesHash;
-		workOrder.instance_name = workOrderRequest.instance_name;
-		workOrder.instance_id = workOrderRequest.instance_id;
-		workOrder.instance_url = workOrderRequest.instance_url;
-		workOrder.node_id = workOrderRequest.node_id;
-		workOrder.node_url = workOrderRequest.node_url;
+		workOrder.callback_instance_url = workOrderRequest.callback_instance_url;
 		workOrder.scheduled_time = scheduledTime;
 		workOrder.priority = priority;
 		workOrder.requested_by = gs.getUserName();
 		var sys_id = workOrder.insert();
 
-		this.workOrderHistoryService.addEntry(sys_id, initialState);
-
 		// Form a reply
 		var workOrderReply = {};
+		workOrderReply.sys_id = sys_id;
+		// todo: include node_id of scheduler. how?
 		workOrderReply.token = workOrderRequest.token;
-		workOrderReply.scheduledTime = scheduledTime.getDisplayValue();
-		workOrderReply.priority = priority;
+		workOrderReply.created_time = scheduledTime.getDisplayValue();
+		workOrderReply.applied_priority = priority;
 		workOrderReply.state = initialState;
-		workOrderReply.capability = workOrderRequest.capability;
+		workOrderReply.capability_required = workOrderRequest.capability_required;
 		return workOrderReply;
 	},
 
@@ -93,7 +82,6 @@ WorkOrderService.prototype = {
 		if (!gs.nil(workOrder)) {
 			workOrder.setValue("state", "cancelled");
 			workOrder.update();
-			this.workOrderHistoryService.addEntry(workOrder.getUniqueValue(), "cancelled");
 		} else {
 			gs.info("No work order found for token " + workOrderToken);
 		}
@@ -223,15 +211,21 @@ function registerWorker(requestingWorker, capabilityService) {
 function checkWorkOrderRequest(workOrderRequest, capabilityService) {
 	// Parameter validation
 	if (gs.nil(workOrderRequest) || gs.nil(workOrderRequest.token) ||
-		gs.nil(workOrderRequest.instance_name) || gs.nil(workOrderRequest.instance_url) ||
-		gs.nil(workOrderRequest.instance_id) || gs.nil(workOrderRequest.node_id) ||
-		gs.nil(workOrderRequest.node_url)
-	) {
-		throw "workOrderRequest parameter is malformed. It requires the following fields: token, instance_name, " +
-		"instance_url, instance_id, node_id, node_url, capability";
+		gs.nil(workOrderRequest.capability_required) || gs.nil(workOrderRequest.callback_instance_url)) {
+		throw "workOrderRequest parameter is malformed. It requires the following fields: token, " +
+			"callback_instance_url, capability_required";
 	}
 
-	var error = capabilityService.checkRequestedCapability(workOrderRequest.capability);
+	// if (gs.nil(workOrderRequest) || gs.nil(workOrderRequest.token) ||
+	// 	gs.nil(workOrderRequest.instance_name) || gs.nil(workOrderRequest.instance_url) ||
+	// 	gs.nil(workOrderRequest.instance_id) || gs.nil(workOrderRequest.node_id) ||
+	// 	gs.nil(workOrderRequest.node_url)
+	// ) {
+	// 	throw "workOrderRequest parameter is malformed. It requires the following fields: token, instance_name, " +
+	// 	"instance_url, instance_id, node_id, node_url, capability";
+	// }
+
+	var error = capabilityService.checkRequestedCapability(workOrderRequest.capability_required);
 	if (!gs.nil(error)) {
 		throw error;
 	}
@@ -269,7 +263,7 @@ function checkRequestingWorker(requestingWorker, capabilityService) {
         <sys_created_on>2017-02-10 21:38:26</sys_created_on>
         <sys_customer_update>false</sys_customer_update>
         <sys_id>0cb587263b303200d41a456993efc4d0</sys_id>
-        <sys_mod_count>3</sys_mod_count>
+        <sys_mod_count>8</sys_mod_count>
         <sys_name>WorkOrderService</sys_name>
         <sys_package display_value="Service Request Management" source="sn_service_request">c8a02be10b303200d109061437673a7b</sys_package>
         <sys_policy>read</sys_policy>
@@ -277,6 +271,6 @@ function checkRequestingWorker(requestingWorker, capabilityService) {
         <sys_scope display_value="Service Request Management">c8a02be10b303200d109061437673a7b</sys_scope>
         <sys_update_name>sys_script_include_0cb587263b303200d41a456993efc4d0</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2017-02-11 00:33:02</sys_updated_on>
+        <sys_updated_on>2017-02-13 19:24:45</sys_updated_on>
     </sys_script_include>
 </record_update>

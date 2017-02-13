@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>package_private</access>
+        <active>true</active>
+        <api_name>sn_service_request.CallerService</api_name>
+        <client_callable>false</client_callable>
+        <description/>
+        <name>CallerService</name>
+        <script><![CDATA[var CallerService = Class.create();
+CallerService.prototype = {
+    initialize: function() {
+    },
+	
+	createFromRequestHeader : function(/*RESTAPIRequest*/ request) {
+		return new Caller(request.getHeader("instance_name"), request.getHeader("instance_url"), request.getHeader("instance_id"),
+						 request.getHeader("node_id"), request.getHeader("node_url"));
+	},
+
+    type: 'CallerService'
+};
+
+function checkHeader(/*RESTAPIRequest*/ request) {
+	if (gs.nil(request) || gs.nil(request.header) ||
+		gs.nil(request.getHeader("instance_name")) || gs.nil(request.getHeader("instance_url")) ||
+		gs.nil(request.getHeader("instance_id")) || gs.nil(request.getHeader("node_id")) || 
+		gs.nil(request.getHeader("node_url"))
+	) {
+		throw "Header is malformed. Required request headers are: instance_name, instance_url, instance_id, node_id, node_url.";
+	}	 
+}]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2017-02-13 16:45:55</sys_created_on>
+        <sys_customer_update>false</sys_customer_update>
+        <sys_id>848fd5273b303200d41a456993efc4f6</sys_id>
+        <sys_mod_count>4</sys_mod_count>
+        <sys_name>CallerService</sys_name>
+        <sys_package display_value="Service Request Management" source="sn_service_request">c8a02be10b303200d109061437673a7b</sys_package>
+        <sys_policy>read</sys_policy>
+        <sys_replace_on_upgrade>false</sys_replace_on_upgrade>
+        <sys_scope display_value="Service Request Management">c8a02be10b303200d109061437673a7b</sys_scope>
+        <sys_update_name>sys_script_include_848fd5273b303200d41a456993efc4f6</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2017-02-13 17:18:58</sys_updated_on>
+    </sys_script_include>
+</record_update>
